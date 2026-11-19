@@ -87,3 +87,48 @@ macro_rules! validate_chain {
         Ok::<(), $crate::input_validation::ValidationError>(())
     }};
 }
+
+/// Return `Err($err)` unless `$cond` holds. The general-purpose guard for
+/// state/permission checks that have no dedicated validator.
+///
+/// `ensure!(balance >= cost, MyError::InsufficientFunds);`
+#[macro_export]
+macro_rules! ensure {
+    ($cond:expr, $err:expr) => {
+        if !($cond) {
+            return Err($err.into());
+        }
+    };
+}
+
+/// Validate a value is zero or greater and return early on error.
+#[macro_export]
+macro_rules! validate_non_negative {
+    ($value:expr) => {
+        $crate::input_validation::check_non_negative($value as i128)?
+    };
+}
+
+/// Validate two addresses differ and return early on error.
+#[macro_export]
+macro_rules! validate_distinct {
+    ($a:expr, $b:expr) => {
+        $crate::input_validation::check_distinct_addresses(&$a, &$b)?
+    };
+}
+
+/// Checked `i128` multiply that returns `ArithmeticOverflow` instead of panicking.
+#[macro_export]
+macro_rules! safe_mul {
+    ($a:expr, $b:expr) => {
+        $crate::input_validation::safe_mul($a, $b)?
+    };
+}
+
+/// Checked `i128` add that returns `ArithmeticOverflow` instead of panicking.
+#[macro_export]
+macro_rules! safe_add {
+    ($a:expr, $b:expr) => {
+        $crate::input_validation::safe_add($a, $b)?
+    };
+}

@@ -77,7 +77,10 @@ fn chaos_network_connection_refused_does_not_corrupt_state() {
     assert!(call_result.is_err());
 
     // State must remain unchanged after a failed call.
-    assert_eq!(player_balance, 1_000, "balance must not change after failed RPC call");
+    assert_eq!(
+        player_balance, 1_000,
+        "balance must not change after failed RPC call"
+    );
 }
 
 // ─── HTTP 5xx server errors ───────────────────────────────────────────────────
@@ -165,7 +168,10 @@ fn chaos_network_partial_degradation_reads_still_work() {
     let read_result = simulate_read();
     let write_result = simulate_write();
 
-    assert!(read_result.is_ok(), "reads must succeed during partial degradation");
+    assert!(
+        read_result.is_ok(),
+        "reads must succeed during partial degradation"
+    );
     assert!(write_result.is_err(), "writes may fail during degradation");
 }
 
@@ -201,7 +207,10 @@ fn chaos_network_circuit_breaker_opens_after_threshold() {
         }
     }
 
-    assert!(circuit_open, "circuit breaker must open after {FAILURE_THRESHOLD} failures");
+    assert!(
+        circuit_open,
+        "circuit breaker must open after {FAILURE_THRESHOLD} failures"
+    );
 }
 
 #[test]
@@ -218,7 +227,10 @@ fn chaos_network_circuit_breaker_does_not_open_below_threshold() {
         }
     }
 
-    assert!(!circuit_open, "circuit breaker must stay closed below threshold");
+    assert!(
+        !circuit_open,
+        "circuit breaker must stay closed below threshold"
+    );
 }
 
 // ─── Mock serde_json for parse error test ────────────────────────────────────

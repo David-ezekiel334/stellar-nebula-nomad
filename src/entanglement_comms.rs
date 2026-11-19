@@ -14,7 +14,7 @@ pub const MAX_MESSAGE_BURST: u32 = 20;
 #[contracttype]
 pub enum EntanglementKey {
     /// Auto-incrementing pair ID counter.
-    Counter,
+    EntanglementCounter,
     /// Entanglement pair by ID.
     Pair(u64),
     /// Message log index per pair (pair_id → total messages sent).
@@ -132,7 +132,7 @@ pub fn create_entanglement_pair(
     let pair_id: u64 = env
         .storage()
         .instance()
-        .get(&EntanglementKey::Counter)
+        .get(&EntanglementKey::EntanglementCounter)
         .unwrap_or(0);
 
     let now = env.ledger().timestamp();
@@ -152,7 +152,7 @@ pub fn create_entanglement_pair(
         .set(&EntanglementKey::Pair(pair_id), &pair);
     env.storage()
         .instance()
-        .set(&EntanglementKey::Counter, &(pair_id + 1));
+        .set(&EntanglementKey::EntanglementCounter, &(pair_id + 1));
     env.storage()
         .instance()
         .set(&EntanglementKey::MsgCount(pair_id), &0u64);

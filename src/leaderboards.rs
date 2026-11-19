@@ -70,7 +70,7 @@ pub enum LeaderboardDataKey {
     /// Achievement leaderboard.
     AchievementBoard,
     /// Admin address.
-    Admin,
+    LeaderboardAdmin,
     /// Current season number per (category, time_period).
     Season(Symbol, Symbol),
     /// Archived leaderboard entries per (category, time_period, season).
@@ -209,12 +209,14 @@ pub fn set_admin(env: &Env, admin: &Address) -> Result<(), LeaderboardError> {
     }
     env.storage()
         .persistent()
-        .set(&LeaderboardDataKey::Admin, admin);
+        .set(&LeaderboardDataKey::LeaderboardAdmin, admin);
     Ok(())
 }
 
 fn get_admin(env: &Env) -> Option<Address> {
-    env.storage().persistent().get(&LeaderboardDataKey::Admin)
+    env.storage()
+        .persistent()
+        .get(&LeaderboardDataKey::LeaderboardAdmin)
 }
 
 fn require_admin(env: &Env, caller: &Address) -> Result<(), LeaderboardError> {

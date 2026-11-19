@@ -78,7 +78,10 @@ fn fuzz_max_waypoints_boundary() {
     let over_limit: Vec<(i64, i64)> = (0..(MAX_WAYPOINTS + 1) as i64).map(|i| (i, i)).collect();
 
     assert!(at_limit.len() <= MAX_WAYPOINTS);
-    assert!(over_limit.len() > MAX_WAYPOINTS, "over-limit route should be rejected");
+    assert!(
+        over_limit.len() > MAX_WAYPOINTS,
+        "over-limit route should be rejected"
+    );
 }
 
 // ─── Jump distance arithmetic ────────────────────────────────────────────────

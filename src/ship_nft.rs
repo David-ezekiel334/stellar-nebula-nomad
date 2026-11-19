@@ -12,7 +12,7 @@ pub enum DataKey {
     /// List of ship IDs owned by an address: `OwnerShips(address)`.
     OwnerShips(Address),
     /// Reentrancy lock for mint/transfer state transitions.
-    ReentrancyLock,
+    ShipNftReentrancyLock,
 }
 
 // ─── Custom Errors ────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ fn is_valid_ship_type(ship_type: &Symbol) -> bool {
 }
 
 fn enter_lock(env: &Env) -> Result<(), ShipError> {
-    let key = DataKey::ReentrancyLock;
+    let key = DataKey::ShipNftReentrancyLock;
     let locked: bool = env.storage().persistent().get(&key).unwrap_or(false);
     if locked {
         return Err(ShipError::ReentrancyDetected);
@@ -143,7 +143,7 @@ fn enter_lock(env: &Env) -> Result<(), ShipError> {
 fn exit_lock(env: &Env) {
     env.storage()
         .persistent()
-        .set(&DataKey::ReentrancyLock, &false);
+        .set(&DataKey::ShipNftReentrancyLock, &false);
 }
 
 // ─── Internal Helpers ────────────────────────────────────────────────────

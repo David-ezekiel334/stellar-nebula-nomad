@@ -59,7 +59,7 @@ pub enum LootError {
 #[contracttype]
 #[derive(Clone)]
 pub enum LootDataKey {
-    Admin,
+    LootAdmin,
     BoxType(u64),
     BoxTypeCounter,
     /// Non-transferable, earn-only currency balance.
@@ -124,12 +124,12 @@ pub fn set_loot_admin(env: &Env, admin: &Address) -> Result<(), LootError> {
     if env
         .storage()
         .instance()
-        .get::<_, Address>(&LootDataKey::Admin)
+        .get::<_, Address>(&LootDataKey::LootAdmin)
         .is_some()
     {
         return Err(LootError::AlreadyInitialized);
     }
-    env.storage().instance().set(&LootDataKey::Admin, admin);
+    env.storage().instance().set(&LootDataKey::LootAdmin, admin);
     Ok(())
 }
 
@@ -138,7 +138,7 @@ fn require_admin(env: &Env, caller: &Address) -> Result<(), LootError> {
     let admin: Address = env
         .storage()
         .instance()
-        .get(&LootDataKey::Admin)
+        .get(&LootDataKey::LootAdmin)
         .ok_or(LootError::Unauthorized)?;
     if admin != *caller {
         return Err(LootError::Unauthorized);

@@ -81,7 +81,7 @@ pub enum EloKey {
     GamesPlayed(Address),
     RatingHistory(Address, u32),
     SeasonConfig,
-    Leaderboard,
+    EloLeaderboard,
 }
 
 // ── Tier Logic ────────────────────────────────────────────────────────────────
@@ -151,11 +151,7 @@ pub fn get_games_played(env: &Env, player: &Address) -> u32 {
 
 /// Calculate updated ratings for winner and loser using dynamic K-factor.
 /// Returns `(new_winner_rating, new_loser_rating)`.
-pub fn calculate_updated_ratings(
-    env: &Env,
-    winner: &Address,
-    loser: &Address,
-) -> (u32, u32) {
+pub fn calculate_updated_ratings(env: &Env, winner: &Address, loser: &Address) -> (u32, u32) {
     let winner_rating = get_elo_rating(env, winner);
     let loser_rating = get_elo_rating(env, loser);
     let winner_games = get_games_played(env, winner);
@@ -164,12 +160,8 @@ pub fn calculate_updated_ratings(
     let k_winner = k_factor_for(winner_games, winner_rating) as f64;
     let k_loser = k_factor_for(loser_games, loser_rating) as f64;
 
-    let expected_winner = 1.0
-        / (1.0
-            + libm::pow(
-                10.0,
-                (loser_rating as f64 - winner_rating as f64) / 400.0,
-            ));
+    let expected_winner =
+        1.0 / (1.0 + libm::pow(10.0, (loser_rating as f64 - winner_rating as f64) / 400.0));
     let expected_loser = 1.0 - expected_winner;
 
     let winner_gain = libm::round(k_winner * (1.0 - expected_winner)) as u32;

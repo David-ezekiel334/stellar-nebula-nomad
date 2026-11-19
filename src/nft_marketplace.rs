@@ -69,7 +69,7 @@ pub const WASH_TRADE_WINDOW_SECONDS: u64 = 604_800;
 #[contracttype]
 pub enum MarketplaceKey {
     // Listings
-    Listing(u64),
+    NftMarketListing(u64),
     ListingCounter,
     SellerListings(Address),
 
@@ -620,7 +620,7 @@ pub fn create_listing(
     // Store listing
     env.storage()
         .persistent()
-        .set(&MarketplaceKey::Listing(listing_id), &listing);
+        .set(&MarketplaceKey::NftMarketListing(listing_id), &listing);
 
     // Update seller's listing index
     let mut updated_listings = seller_listings;
@@ -649,7 +649,7 @@ pub fn buy_listing(env: &Env, buyer: &Address, listing_id: u64) -> Result<(), Ma
     let listing: FixedPriceListing = env
         .storage()
         .persistent()
-        .get(&MarketplaceKey::Listing(listing_id))
+        .get(&MarketplaceKey::NftMarketListing(listing_id))
         .ok_or(MarketplaceError::NotFound)?;
 
     // Check expiration
@@ -718,7 +718,7 @@ pub fn cancel_listing(
     let listing: FixedPriceListing = env
         .storage()
         .persistent()
-        .get(&MarketplaceKey::Listing(listing_id))
+        .get(&MarketplaceKey::NftMarketListing(listing_id))
         .ok_or(MarketplaceError::NotFound)?;
 
     if &listing.seller != seller {
@@ -745,7 +745,7 @@ pub fn cancel_listing(
 fn remove_listing(env: &Env, seller: &Address, listing_id: u64) {
     env.storage()
         .persistent()
-        .remove(&MarketplaceKey::Listing(listing_id));
+        .remove(&MarketplaceKey::NftMarketListing(listing_id));
 
     let listings: Vec<u64> = env
         .storage()
@@ -1381,7 +1381,7 @@ pub fn search_listings(env: &Env, query: String, filter: SearchFilter) -> Vec<Fi
         if let Some(listing) = env
             .storage()
             .persistent()
-            .get::<_, FixedPriceListing>(&MarketplaceKey::Listing(id))
+            .get::<_, FixedPriceListing>(&MarketplaceKey::NftMarketListing(id))
         {
             // Apply filters
             if let Some(cat) = filter.category {
@@ -1538,7 +1538,7 @@ fn bump_collected_fees(env: &Env, amount: i128) -> Result<(), MarketplaceError> 
 pub fn get_listing(env: &Env, listing_id: u64) -> Option<FixedPriceListing> {
     env.storage()
         .persistent()
-        .get(&MarketplaceKey::Listing(listing_id))
+        .get(&MarketplaceKey::NftMarketListing(listing_id))
 }
 
 pub fn get_auction(env: &Env, auction_id: u64) -> Option<AuctionListing> {

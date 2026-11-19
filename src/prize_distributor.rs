@@ -14,7 +14,7 @@ pub enum PrizeKey {
     /// Current prize pool balance.
     Pool,
     /// Admin / pool operator address.
-    Admin,
+    PrizeAdmin,
     /// Ledger timestamp of the last weekly reset.
     LastReset,
     /// Total prizes distributed all-time.
@@ -95,7 +95,7 @@ fn prize_share(pool: i128, rank: u32, top_n: u32) -> i128 {
 /// Initialize the prize distributor with an admin address.
 pub fn initialize_prize_distributor(env: &Env, admin: &Address) {
     admin.require_auth();
-    env.storage().instance().set(&PrizeKey::Admin, admin);
+    env.storage().instance().set(&PrizeKey::PrizeAdmin, admin);
     env.storage().instance().set(&PrizeKey::Pool, &0i128);
     env.storage()
         .instance()
@@ -143,7 +143,7 @@ pub fn submit_leaderboard_snapshot(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&PrizeKey::Admin)
+        .get(&PrizeKey::PrizeAdmin)
         .ok_or(PrizeError::NotAuthorized)?;
     if stored_admin != *admin {
         return Err(PrizeError::NotAuthorized);
@@ -179,7 +179,7 @@ pub fn distribute_weekly_prizes(
     let admin: Address = env
         .storage()
         .instance()
-        .get(&PrizeKey::Admin)
+        .get(&PrizeKey::PrizeAdmin)
         .ok_or(PrizeError::NotAuthorized)?;
     if admin != *caller {
         return Err(PrizeError::NotAuthorized);

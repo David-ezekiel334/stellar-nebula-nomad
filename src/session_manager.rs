@@ -11,11 +11,11 @@ pub const MAX_SESSIONS_PER_PLAYER: u32 = 3;
 #[contracttype]
 pub enum SessionKey {
     /// Individual session data keyed by session ID.
-    Session(u64),
+    SessMgrSession(u64),
     /// Active session count for a player (enforces 3-session cap).
     PlayerSessionCount(Address),
     /// Global auto-increment counter for session IDs.
-    SessionCount,
+    SessMgrSessionCount,
 }
 
 // ─── Data Types ───────────────────────────────────────────────────────────────
@@ -80,10 +80,12 @@ pub fn start_session(env: &Env, owner: Address, ship_id: u64) -> Result<u64, Ses
     let id: u64 = env
         .storage()
         .instance()
-        .get(&SessionKey::SessionCount)
+        .get(&SessionKey::SessMgrSessionCount)
         .unwrap_or(0u64)
         + 1;
-    env.storage().instance().set(&SessionKey::SessionCount, &id);
+    env.storage()
+        .instance()
+        .set(&SessionKey::SessMgrSessionCount, &id);
 
     let now = env.ledger().timestamp();
     let session = Session {
@@ -97,7 +99,7 @@ pub fn start_session(env: &Env, owner: Address, ship_id: u64) -> Result<u64, Ses
 
     env.storage()
         .persistent()
-        .set(&SessionKey::Session(id), &session);
+        .set(&SessionKey::SessMgrSession(id), &session);
     env.storage()
         .persistent()
         .set(&count_key, &(active_count + 1));
@@ -120,7 +122,7 @@ pub fn expire_session(env: &Env, caller: Address, session_id: u64) -> Result<(),
     let mut session: Session = env
         .storage()
         .persistent()
-        .get(&SessionKey::Session(session_id))
+        .get(&SessionKey::SessMgrSession(session_id))
         .ok_or(SessionError::SessionNotFound)?;
 
     if !session.active {
@@ -136,7 +138,7 @@ pub fn expire_session(env: &Env, caller: Address, session_id: u64) -> Result<(),
     session.active = false;
     env.storage()
         .persistent()
-        .set(&SessionKey::Session(session_id), &session);
+        .set(&SessionKey::SessMgrSession(session_id), &session);
 
     // Decrement active session counter for the owner.
     let count_key = SessionKey::PlayerSessionCount(session.owner.clone());
@@ -157,7 +159,7 @@ pub fn expire_session(env: &Env, caller: Address, session_id: u64) -> Result<(),
 pub fn get_session(env: &Env, session_id: u64) -> Result<Session, SessionError> {
     env.storage()
         .persistent()
-        .get(&SessionKey::Session(session_id))
+        .get(&SessionKey::SessMgrSession(session_id))
         .ok_or(SessionError::SessionNotFound)
 }
 

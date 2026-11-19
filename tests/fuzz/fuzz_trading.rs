@@ -54,7 +54,10 @@ fn fuzz_slippage_applied_to_price_no_overflow() {
 
     for price in prices {
         let numerator = price.checked_mul(10_000 - slippage_bps);
-        assert!(numerator.is_some(), "slippage numerator overflowed for price={price}");
+        assert!(
+            numerator.is_some(),
+            "slippage numerator overflowed for price={price}"
+        );
         let effective = numerator.unwrap() / 10_000;
         assert!(effective <= price);
     }
@@ -96,7 +99,10 @@ fn fuzz_escrow_release_exceeds_locked_caught() {
     for release in release_amounts {
         let result = locked.checked_sub(release);
         if release > locked {
-            assert!(result.is_none(), "underflow not caught for release={release}");
+            assert!(
+                result.is_none(),
+                "underflow not caught for release={release}"
+            );
         } else {
             assert!(result.is_some());
         }
@@ -149,11 +155,16 @@ fn fuzz_swap_output_less_than_input_pool() {
     let amount_in: u128 = 1_000;
 
     let denom = reserve_a + amount_in;
-    assert!(denom > reserve_a, "denominator must be larger than reserve_a");
+    assert!(
+        denom > reserve_a,
+        "denominator must be larger than reserve_a"
+    );
 
     let output = reserve_b * amount_in / denom;
-    assert!(output < amount_in || reserve_b > reserve_a,
-        "swap output should be less than input for balanced pools");
+    assert!(
+        output < amount_in || reserve_b > reserve_a,
+        "swap output should be less than input for balanced pools"
+    );
     assert!(output < reserve_b, "output cannot exceed entire reserve");
 }
 
@@ -173,7 +184,10 @@ fn fuzz_fee_calculation_no_overflow() {
     let fee_bps: u64 = 30; // 0.3%
     for amount in amounts {
         let fee = amount.checked_mul(fee_bps).map(|f| f / 10_000);
-        assert!(fee.is_some(), "fee calculation overflowed for amount={amount}");
+        assert!(
+            fee.is_some(),
+            "fee calculation overflowed for amount={amount}"
+        );
     }
 }
 
@@ -193,7 +207,10 @@ fn fuzz_bid_above_ask_is_invalid() {
     let ask: u64 = 100;
     // A bid above ask implies immediate fill and must be validated separately.
     let spread_valid = bid <= ask;
-    assert!(!spread_valid, "bid above ask is an invalid resting order state");
+    assert!(
+        !spread_valid,
+        "bid above ask is an invalid resting order state"
+    );
 }
 
 #[test]

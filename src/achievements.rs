@@ -449,11 +449,11 @@ pub struct AchievementNotification {
 #[derive(Clone)]
 #[contracttype]
 pub enum AchievementStorageKey {
-    PlayerStats(Address),
+    AchievementPlayerStats(Address),
     PlayerProgress(Address, u64),
     Notification(Address, u64),
     NotificationCount(Address),
-    GlobalStats,
+    AchievementGlobalStats,
 }
 
 // ─── Errors ──────────────────────────────────────────────────────────────────
@@ -1782,7 +1782,7 @@ fn increment_player_stats(
     player: &Address,
     achievement_id: u64,
 ) -> Result<(), AchievementsError> {
-    let key = AchievementStorageKey::PlayerStats(player.clone());
+    let key = AchievementStorageKey::AchievementPlayerStats(player.clone());
     let mut stats: PlayerAchievementStats =
         env.storage()
             .persistent()
@@ -1832,7 +1832,7 @@ pub fn get_player_stats(
     env: &Env,
     player: &Address,
 ) -> Result<PlayerAchievementStats, AchievementsError> {
-    let key = AchievementStorageKey::PlayerStats(player.clone());
+    let key = AchievementStorageKey::AchievementPlayerStats(player.clone());
     env.storage()
         .persistent()
         .get(&key)

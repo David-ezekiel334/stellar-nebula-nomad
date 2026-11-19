@@ -10,7 +10,7 @@ pub const MAX_DAILY_SPONSORSHIPS: u32 = 100;
 #[contracttype]
 pub enum DataKey {
     /// Admin address with replenishment rights.
-    Admin,
+    GasSponsorAdmin,
     /// Current sponsorship fund balance.
     FundBalance,
     /// Daily sponsorship counter (resets each day).
@@ -20,7 +20,7 @@ pub enum DataKey {
     /// Sponsorship status for a player: true = already sponsored.
     SponsoredStatus(Address),
     /// Config for minimum fund threshold and daily cap.
-    Config,
+    GasSponsorConfig,
     /// Lifetime sponsored amount per user (in stroops).
     UserLifetimeSponsored(Address),
     /// Per-user daily sponsorship count (resets each day).
@@ -152,7 +152,9 @@ pub fn initialize(env: &Env, admin: &Address, initial_fund: i128) -> Result<(), 
         return Err(SponsorError::InvalidAmount);
     }
 
-    env.storage().instance().set(&DataKey::Admin, admin);
+    env.storage()
+        .instance()
+        .set(&DataKey::GasSponsorAdmin, admin);
     env.storage()
         .instance()
         .set(&DataKey::FundBalance, &initial_fund);
@@ -162,7 +164,7 @@ pub fn initialize(env: &Env, admin: &Address, initial_fund: i128) -> Result<(), 
         .set(&DataKey::LastResetTimestamp, &env.ledger().timestamp());
     env.storage()
         .instance()
-        .set(&DataKey::Config, &SponsorConfig::default());
+        .set(&DataKey::GasSponsorConfig, &SponsorConfig::default());
 
     env.events().publish(
         (symbol_short!("sponsor"), symbol_short!("init")),
@@ -209,7 +211,7 @@ pub fn sponsor_first_scan(env: &Env, player: &Address) -> Result<i128, SponsorEr
     let current_count = reset_daily_counter_if_needed(env);
 
     let config: SponsorConfig = instance
-        .get(&DataKey::Config)
+        .get(&DataKey::GasSponsorConfig)
         .ok_or(SponsorError::NotInitialized)?;
 
     if current_count >= config.daily_cap {
@@ -278,7 +280,7 @@ pub fn claim_sponsorship_fund(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::GasSponsorAdmin)
         .ok_or(SponsorError::NotInitialized)?;
 
     if admin != &stored_admin {
@@ -339,19 +341,19 @@ pub fn get_remaining_daily_slots(env: &Env) -> u32 {
     let config: SponsorConfig = env
         .storage()
         .instance()
-        .get(&DataKey::Config)
+        .get(&DataKey::GasSponsorConfig)
         .unwrap_or_else(SponsorConfig::default);
     config.daily_cap.saturating_sub(count)
 }
 
 /// Get the current admin address.
 pub fn get_admin(env: &Env) -> Option<Address> {
-    env.storage().instance().get(&DataKey::Admin)
+    env.storage().instance().get(&DataKey::GasSponsorAdmin)
 }
 
 /// Get the sponsorship configuration.
 pub fn get_config(env: &Env) -> Option<SponsorConfig> {
-    env.storage().instance().get(&DataKey::Config)
+    env.storage().instance().get(&DataKey::GasSponsorConfig)
 }
 
 /// Get the lifetime sponsored amount for a user.
@@ -453,7 +455,7 @@ pub fn update_config(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::GasSponsorAdmin)
         .ok_or(SponsorError::NotInitialized)?;
 
     if admin != &stored_admin {
@@ -472,7 +474,9 @@ pub fn update_config(
         per_user_daily_cap,
     };
 
-    env.storage().instance().set(&DataKey::Config, &config);
+    env.storage()
+        .instance()
+        .set(&DataKey::GasSponsorConfig, &config);
 
     env.events().publish(
         (symbol_short!("sponsor"), symbol_short!("config")),
@@ -506,7 +510,7 @@ pub fn create_mobile_session(
     let config: SponsorConfig = env
         .storage()
         .instance()
-        .get(&DataKey::Config)
+        .get(&DataKey::GasSponsorConfig)
         .ok_or(SponsorError::NotInitialized)?;
 
     let session_key = MobileSessionKey {
@@ -627,7 +631,7 @@ pub fn reset_fraud_score(env: &Env, admin: &Address, player: &Address) -> Result
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::GasSponsorAdmin)
         .ok_or(SponsorError::NotInitialized)?;
 
     if admin != &stored_admin {

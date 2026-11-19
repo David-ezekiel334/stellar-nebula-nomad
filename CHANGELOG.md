@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Access control audit (#608):** `use_ability`, `init_combat_abilities`,
+  `tick_ability_cooldowns`, `process_anti_whale_action`,
+  `generate_yield_forecast`, `update_forecast_model` and
+  `create_player_reputation` now require the acting address's signature;
+  `use_ability` also rejects non-participants. Only an alliance's founder can
+  create guild quests (previously any signer could mint treasury rewards).
+  `access_control::transfer_admin` no longer re-authenticates the caller inside
+  `revoke_role`/`grant_role` (it could never succeed on-chain). New
+  `tests/security/access_control_tests.rs` (incl. a static audit of every entry
+  point) and `docs/ACCESS_CONTROL_PATTERNS.md`.
+- **Rate limiting (#610):** new `CombatInitiation`, `TournamentRegistration`,
+  `Crafting` and `Trading` operations enforced in `pvp_combat`, `tournament`,
+  `crafting` and `trading`; `get_rate_limit_config`; saturating window math.
+  See `docs/RATE_LIMITING.md`.
+- **Input validation (#611):** bounded tournament players/window/prize shares,
+  PvP stakes and move power, limit-order price/quantity; checked AMM
+  arithmetic; self-challenge rejected; new helpers/macros in
+  `input_validation` and `validation_macros`. See `docs/INPUT_VALIDATION.md`.
+  `TournamentError::InsufficientFunds` replaces a misleading
+  `RegistrationClosed` for unaffordable entry fees.
+
+### Fixed
+
+- **Storage key collisions (#609):** 24 colliding `(variant, payload)` key
+  signatures across 117 key enums (e.g. `Admin` in 23 modules) are now
+  module-prefixed, e.g. `StakingAdmin`, `DaoConfig`. **Stored key encodings
+  changed**; existing deployments need a migration (see
+  `docs/STORAGE_KEY_CONVENTIONS.md`). Adds `scripts/check_storage_keys.py`
+  (run in CI) and `tests/security/storage_key_collisions.rs`.
+- `main` did not compile: fixed conflicting `MatchResult`/elo re-exports in
+  `lib.rs`, a missing return in `ship_abilities::hauler_abilities`, and the
+  `tests/fuzz` borrow/overflow assertions. The `tournament` and
+  `validation_macros` modules existed but were never declared; they are now
+  compiled.
+
 ### Changed
 
 - **Breaking (#573):** the anomaly-based layout in `nebula_gen` is renamed

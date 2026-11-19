@@ -20,7 +20,7 @@ pub enum ListingStatus {
 #[derive(Clone)]
 #[contracttype]
 pub enum MarketplaceKey {
-    Listing(u64),
+    SkinMarketListing(u64),
     PlayerListings(Address),
     SkinListing(u64), // skin_id -> listing_id
 }
@@ -84,7 +84,10 @@ pub fn list_skin(
         return Err(MarketplaceError::AlreadyListed);
     }
 
-    let id = env.ledger().timestamp().wrapping_add(env.ledger().sequence() as u64);
+    let id = env
+        .ledger()
+        .timestamp()
+        .wrapping_add(env.ledger().sequence() as u64);
     let timestamp = env.ledger().timestamp();
 
     let listing = SkinListing {
@@ -98,23 +101,23 @@ pub fn list_skin(
         buyer: None,
     };
 
-    env.storage().persistent().set(&MarketplaceKey::Listing(id), &listing);
-    env.storage().persistent().set(&MarketplaceKey::SkinListing(skin_id), &id);
+    env.storage()
+        .persistent()
+        .set(&MarketplaceKey::SkinMarketListing(id), &listing);
+    env.storage()
+        .persistent()
+        .set(&MarketplaceKey::SkinListing(skin_id), &id);
     Ok(id)
 }
 
 /// Buy a listed skin.
-pub fn buy_skin(
-    env: &Env,
-    buyer: &Address,
-    listing_id: u64,
-) -> Result<(), MarketplaceError> {
+pub fn buy_skin(env: &Env, buyer: &Address, listing_id: u64) -> Result<(), MarketplaceError> {
     buyer.require_auth();
 
     let mut listing = env
         .storage()
         .persistent()
-        .get::<MarketplaceKey, SkinListing>(&MarketplaceKey::Listing(listing_id))
+        .get::<MarketplaceKey, SkinListing>(&MarketplaceKey::SkinMarketListing(listing_id))
         .ok_or(MarketplaceError::ListingNotFound)?;
 
     if listing.status != ListingStatus::Active {
@@ -125,16 +128,22 @@ pub fn buy_skin(
     }
     if env.ledger().timestamp() > listing.expires_at {
         listing.status = ListingStatus::Expired;
-        env.storage().persistent().set(&MarketplaceKey::Listing(listing_id), &listing);
+        env.storage()
+            .persistent()
+            .set(&MarketplaceKey::SkinMarketListing(listing_id), &listing);
         return Err(MarketplaceError::ListingExpired);
     }
 
     listing.status = ListingStatus::Sold;
     listing.buyer = Some(buyer.clone());
-    env.storage().persistent().set(&MarketplaceKey::Listing(listing_id), &listing);
+    env.storage()
+        .persistent()
+        .set(&MarketplaceKey::SkinMarketListing(listing_id), &listing);
 
     // Clean up skin listing index
-    env.storage().persistent().remove(&MarketplaceKey::SkinListing(listing.skin_id));
+    env.storage()
+        .persistent()
+        .remove(&MarketplaceKey::SkinListing(listing.skin_id));
 
     Ok(())
 }
@@ -150,7 +159,7 @@ pub fn cancel_listing(
     let mut listing = env
         .storage()
         .persistent()
-        .get::<MarketplaceKey, SkinListing>(&MarketplaceKey::Listing(listing_id))
+        .get::<MarketplaceKey, SkinListing>(&MarketplaceKey::SkinMarketListing(listing_id))
         .ok_or(MarketplaceError::ListingNotFound)?;
 
     if listing.seller != *seller {
@@ -158,22 +167,25 @@ pub fn cancel_listing(
     }
 
     listing.status = ListingStatus::Cancelled;
-    env.storage().persistent().set(&MarketplaceKey::Listing(listing_id), &listing);
-    env.storage().persistent().remove(&MarketplaceKey::SkinListing(listing.skin_id));
+    env.storage()
+        .persistent()
+        .set(&MarketplaceKey::SkinMarketListing(listing_id), &listing);
+    env.storage()
+        .persistent()
+        .remove(&MarketplaceKey::SkinListing(listing.skin_id));
 
     Ok(())
 }
 
 /// Get a listing by ID.
 pub fn get_listing(env: &Env, listing_id: u64) -> Option<SkinListing> {
-    env.storage().persistent().get(&MarketplaceKey::Listing(listing_id))
+    env.storage()
+        .persistent()
+        .get(&MarketplaceKey::SkinMarketListing(listing_id))
 }
 
 /// Search listings by max price.
-pub fn search_by_price(
-    env: &Env,
-    max_price: i128,
-) -> Vec<SkinListing> {
+pub fn search_by_price(env: &Env, max_price: i128) -> Vec<SkinListing> {
     // In production, this would use an indexed query.
     // For now, return empty vec as full index implementation is complex.
     Vec::new(env)

@@ -13,7 +13,7 @@ const SCALE_PPM: i128 = 1_000_000;
 #[derive(Clone)]
 #[contracttype]
 pub enum CurveKey {
-    Config,
+    CurveConfig,
 }
 
 #[contracterror]
@@ -83,12 +83,12 @@ fn default_config(env: &Env) -> CurveConfig {
 fn load_config(env: &Env) -> CurveConfig {
     env.storage()
         .instance()
-        .get(&CurveKey::Config)
+        .get(&CurveKey::CurveConfig)
         .unwrap_or_else(|| default_config(env))
 }
 
 fn persist_config(env: &Env, config: &CurveConfig) {
-    env.storage().instance().set(&CurveKey::Config, config);
+    env.storage().instance().set(&CurveKey::CurveConfig, config);
 }
 
 fn curve_score_for_level(config: &CurveConfig, player_level: u32) -> i128 {

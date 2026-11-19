@@ -12,7 +12,7 @@ pub enum RecyclingKey {
     /// Auto-incrementing recipe ID counter.
     RecipeCounter,
     /// Player-specific crafting stats (optional, for efficiency multipliers).
-    PlayerStats(Address),
+    RecyclingPlayerStats(Address),
 }
 
 /// ─── Errors ─────────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@ pub const MAX_FORECAST_BURST: u32 = 100;
 #[contracttype]
 pub enum DataKey {
     /// Admin address.
-    Admin,
+    YieldForecastAdmin,
     /// Historical yield data for a player.
     PlayerHistory(Address),
     /// Cached forecast for a player.
@@ -119,7 +119,9 @@ impl Default for ModelParams {
 pub fn initialize(env: &Env, admin: &Address) -> Result<(), ForecastError> {
     admin.require_auth();
 
-    env.storage().instance().set(&DataKey::Admin, admin);
+    env.storage()
+        .instance()
+        .set(&DataKey::YieldForecastAdmin, admin);
     env.storage().instance().set(&DataKey::ModelVersion, &1u32);
     env.storage()
         .instance()
@@ -455,7 +457,7 @@ pub fn update_model_params(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::YieldForecastAdmin)
         .ok_or(ForecastError::Unauthorized)?;
 
     if admin != &stored_admin {

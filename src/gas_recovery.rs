@@ -11,11 +11,11 @@ pub const REFUND_BATCH_SIZE: u32 = 10;
 #[contracttype]
 pub enum RefundKey {
     /// Refund configuration: percentage in basis points.
-    Config,
+    GasRecoveryConfig,
     /// Refund request status keyed by transaction hash.
     Refund(BytesN<32>),
     /// Admin address authorized to process refunds.
-    Admin,
+    GasRecoveryAdmin,
     /// Counter for total refund amount processed.
     TotalRefunded,
 }
@@ -76,8 +76,8 @@ pub struct RefundRequest {
 /// Initialize refund module with default config and set admin.
 pub fn initialize_refund(env: &Env, admin: &Address) {
     ensure_auth!(admin);
-    storage_set!(env, RefundKey::Admin, admin);
-    storage_set!(env, RefundKey::Config, DEFAULT_REFUND_BPS);
+    storage_set!(env, RefundKey::GasRecoveryAdmin, admin);
+    storage_set!(env, RefundKey::GasRecoveryConfig, DEFAULT_REFUND_BPS);
     storage_set!(env, RefundKey::TotalRefunded, 0u64);
 }
 
@@ -87,7 +87,7 @@ pub fn set_refund_percentage(env: &Env, admin: &Address, bps: u32) -> Result<(),
     if env
         .storage()
         .instance()
-        .get::<RefundKey, Address>(&RefundKey::Admin)
+        .get::<RefundKey, Address>(&RefundKey::GasRecoveryAdmin)
         != Some(admin.clone())
     {
         return Err(RefundError::NotAuthorized);
@@ -95,7 +95,7 @@ pub fn set_refund_percentage(env: &Env, admin: &Address, bps: u32) -> Result<(),
     if bps > 10_000 {
         return Err(RefundError::InvalidPercentage);
     }
-    storage_set!(env, RefundKey::Config, bps);
+    storage_set!(env, RefundKey::GasRecoveryConfig, bps);
     Ok(())
 }
 
@@ -121,7 +121,7 @@ pub fn request_refund(
         return Err(RefundError::NotEligibleForRefund);
     }
 
-    let bps: u32 = storage_get_default!(env, RefundKey::Config, DEFAULT_REFUND_BPS);
+    let bps: u32 = storage_get_default!(env, RefundKey::GasRecoveryConfig, DEFAULT_REFUND_BPS);
     let refund_amount = (gas_used * bps as u64) / 10_000;
 
     let request = RefundRequest {
@@ -169,7 +169,7 @@ pub fn process_refund_batch(
     if env
         .storage()
         .instance()
-        .get::<RefundKey, Address>(&RefundKey::Admin)
+        .get::<RefundKey, Address>(&RefundKey::GasRecoveryAdmin)
         != Some(admin.clone())
     {
         return Err(RefundError::NotAuthorized);

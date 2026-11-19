@@ -90,9 +90,7 @@ fn load_queue(env: &Env, mode: &GameMode) -> Vec<QueueEntry> {
 }
 
 fn save_queue(env: &Env, mode: &GameMode, queue: &Vec<QueueEntry>) {
-    env.storage()
-        .persistent()
-        .set(&queue_key(mode), queue);
+    env.storage().persistent().set(&queue_key(mode), queue);
 }
 
 /// Compute effective MMR search range given how long the player has waited.
@@ -115,11 +113,7 @@ pub fn enqueue(env: &Env, player: &Address, mode: GameMode) -> Result<(), PvPErr
 
     // Abuse prevention: enforce requeue cooldown
     let last_leave_key = MatchmakingKey::LastLeave(player.clone());
-    if let Some(last_leave) = env
-        .storage()
-        .persistent()
-        .get::<_, u64>(&last_leave_key)
-    {
+    if let Some(last_leave) = env.storage().persistent().get::<_, u64>(&last_leave_key) {
         if now.saturating_sub(last_leave) < REQUEUE_COOLDOWN_SECS {
             return Err(PvPError::InvalidCombatParams);
         }
@@ -222,10 +216,9 @@ pub fn process_queue(env: &Env, mode: GameMode) -> Result<Option<MatchResult>, P
                     (e.player.clone(), waited),
                 );
                 // Record leave time so they can re-queue after cooldown
-                env.storage().persistent().set(
-                    &MatchmakingKey::LastLeave(e.player.clone()),
-                    &now,
-                );
+                env.storage()
+                    .persistent()
+                    .set(&MatchmakingKey::LastLeave(e.player.clone()), &now);
             }
         }
     }

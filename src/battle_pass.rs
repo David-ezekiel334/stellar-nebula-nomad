@@ -43,7 +43,7 @@ pub enum PassTier {
 #[contracttype]
 pub enum BattlePassKey {
     /// Player's battle pass state: (profile_id, season_id) -> BattlePassState
-    State(u64, u64),
+    BattlePassState(u64, u64),
     /// Reward template: (season_id, tier, pass_tier_u8) -> BattlePassReward
     /// pass_tier_u8: 0 = Free, 1 = Premium
     Reward(u64, u32, u32),
@@ -161,7 +161,7 @@ pub fn add_xp(
     essence: i128,
 ) -> Result<u64, BattlePassError> {
     let season = get_current_season(env).map_err(|_| BattlePassError::NoActiveSeason)?;
-    let key = BattlePassKey::State(profile_id, season.id);
+    let key = BattlePassKey::BattlePassState(profile_id, season.id);
 
     let mut state: BattlePassState =
         env.storage()
@@ -209,7 +209,7 @@ pub fn add_xp_for_challenge(
 
     env.storage().persistent().set(&dedup_key, &true);
 
-    let key = BattlePassKey::State(profile_id, season.id);
+    let key = BattlePassKey::BattlePassState(profile_id, season.id);
     let mut state: BattlePassState =
         env.storage()
             .persistent()
@@ -239,7 +239,7 @@ pub fn add_xp_for_challenge(
 /// Grant bonus XP for discovering the season's exclusive nebula type.
 pub fn add_xp_for_seasonal_nebula(env: &Env, profile_id: u64) -> Result<u64, BattlePassError> {
     let season = get_current_season(env).map_err(|_| BattlePassError::NoActiveSeason)?;
-    let key = BattlePassKey::State(profile_id, season.id);
+    let key = BattlePassKey::BattlePassState(profile_id, season.id);
 
     let mut state: BattlePassState =
         env.storage()
@@ -286,7 +286,7 @@ pub fn unlock_premium_pass(
     env.storage().persistent().set(&premium_key, &true);
 
     // Also update the cached flag on the state struct for fast reads.
-    let state_key = BattlePassKey::State(profile_id, season.id);
+    let state_key = BattlePassKey::BattlePassState(profile_id, season.id);
     let mut state: BattlePassState =
         env.storage()
             .persistent()
@@ -338,7 +338,7 @@ pub fn claim_reward_v2(
     player.require_auth();
 
     let season = get_current_season(env).map_err(|_| BattlePassError::NoActiveSeason)?;
-    let state_key = BattlePassKey::State(profile_id, season.id);
+    let state_key = BattlePassKey::BattlePassState(profile_id, season.id);
 
     let mut state: BattlePassState = env
         .storage()
@@ -543,7 +543,7 @@ pub fn get_battle_pass_state(
     profile_id: u64,
 ) -> Result<BattlePassState, BattlePassError> {
     let season = get_current_season(env).map_err(|_| BattlePassError::NoActiveSeason)?;
-    let key = BattlePassKey::State(profile_id, season.id);
+    let key = BattlePassKey::BattlePassState(profile_id, season.id);
     env.storage()
         .persistent()
         .get(&key)
@@ -554,7 +554,7 @@ pub fn get_battle_pass_state(
 pub fn get_pass_progress(env: &Env, profile_id: u64, season_id: u64) -> Option<BattlePassState> {
     env.storage()
         .persistent()
-        .get(&BattlePassKey::State(profile_id, season_id))
+        .get(&BattlePassKey::BattlePassState(profile_id, season_id))
 }
 
 /// Legacy shim: claim a free-track reward using the original single-tier API.

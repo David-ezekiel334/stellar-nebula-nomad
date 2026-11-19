@@ -133,19 +133,19 @@ pub const DEFAULT_MULTISIG_SIGNERS: u32 = 5;
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
-    Admin,
+    DaoAdmin,
     DaoAddress,
     StakingContract,
     GovernanceContract,
-    Config,
-    ProposalCounter,
+    DaoConfig,
+    DaoProposalCounter,
     /// One proposal, keyed by proposal ID
-    Proposal(u64),
+    DaoProposal(u64),
     /// One vote record, keyed by (proposal_id, voter_address)
-    Vote(u64, Address),
+    DaoVote(u64, Address),
     TreasuryToken,
     Delegate(Address),
-    Metrics,
+    DaoMetrics,
 }
 
 pub fn default_governance_policy() -> GovernancePolicy {
@@ -218,11 +218,11 @@ pub fn initialize(
 ) -> Result<(), DaoError> {
     admin.require_auth();
 
-    if env.storage().instance().has(&DataKey::Admin) {
+    if env.storage().instance().has(&DataKey::DaoAdmin) {
         return Err(DaoError::AlreadyInitialized);
     }
 
-    env.storage().instance().set(&DataKey::Admin, &admin);
+    env.storage().instance().set(&DataKey::DaoAdmin, &admin);
     env.storage()
         .instance()
         .set(&DataKey::DaoAddress, &env.current_contract_address());
@@ -233,7 +233,7 @@ pub fn initialize(
         .instance()
         .set(&DataKey::GovernanceContract, &governance_contract);
     env.storage().instance().set(
-        &DataKey::Config,
+        &DataKey::DaoConfig,
         &DaoConfig {
             quorum_basis_points,
             voting_period_ledgers,
@@ -256,7 +256,7 @@ pub fn create_proposal(env: Env, proposer: Address, description: String) -> Resu
     let config: DaoConfig = env
         .storage()
         .instance()
-        .get(&DataKey::Config)
+        .get(&DataKey::DaoConfig)
         .ok_or(DaoError::NotInitialized)?;
 
     // Check proposer's voting power meets threshold.
@@ -272,7 +272,7 @@ pub fn create_proposal(env: Env, proposer: Address, description: String) -> Resu
     let proposal_id: u64 = env
         .storage()
         .instance()
-        .get(&DataKey::ProposalCounter)
+        .get(&DataKey::DaoProposalCounter)
         .unwrap_or(0);
 
     let current_ledger = env.ledger().sequence();
@@ -293,11 +293,11 @@ pub fn create_proposal(env: Env, proposer: Address, description: String) -> Resu
 
     env.storage()
         .persistent()
-        .set(&DataKey::Proposal(proposal_id), &proposal);
+        .set(&DataKey::DaoProposal(proposal_id), &proposal);
 
     env.storage()
         .instance()
-        .set(&DataKey::ProposalCounter, &(proposal_id + 1));
+        .set(&DataKey::DaoProposalCounter, &(proposal_id + 1));
 
     env.events().publish(
         (symbol_short!("dao"), symbol_short!("prop_crt")),
@@ -319,7 +319,7 @@ pub fn vote(
     let mut proposal: Proposal = env
         .storage()
         .persistent()
-        .get(&DataKey::Proposal(proposal_id))
+        .get(&DataKey::DaoProposal(proposal_id))
         .ok_or(DaoError::ProposalNotFound)?;
 
     if proposal.status != ProposalStatus::Active {
@@ -377,7 +377,7 @@ pub fn vote(
     // Update proposal with new tallies.
     env.storage()
         .persistent()
-        .set(&DataKey::Proposal(proposal_id), &proposal);
+        .set(&DataKey::DaoProposal(proposal_id), &proposal);
 
     env.events().publish(
         (symbol_short!("dao"), symbol_short!("vote")),
@@ -393,7 +393,7 @@ pub fn execute_proposal(env: Env, proposal_id: u64) -> Result<(), DaoError> {
     let mut proposal: Proposal = env
         .storage()
         .persistent()
-        .get(&DataKey::Proposal(proposal_id))
+        .get(&DataKey::DaoProposal(proposal_id))
         .ok_or(DaoError::ProposalNotFound)?;
 
     let current_ledger = env.ledger().sequence();
@@ -408,7 +408,7 @@ pub fn execute_proposal(env: Env, proposal_id: u64) -> Result<(), DaoError> {
         let config: DaoConfig = env
             .storage()
             .instance()
-            .get(&DataKey::Config)
+            .get(&DataKey::DaoConfig)
             .ok_or(DaoError::NotInitialized)?;
 
         let total_votes = proposal
@@ -433,7 +433,7 @@ pub fn execute_proposal(env: Env, proposal_id: u64) -> Result<(), DaoError> {
     if proposal.status != ProposalStatus::Passed {
         env.storage()
             .persistent()
-            .set(&DataKey::Proposal(proposal_id), &proposal);
+            .set(&DataKey::DaoProposal(proposal_id), &proposal);
         return Err(DaoError::InvalidStatus);
     }
 
@@ -441,7 +441,7 @@ pub fn execute_proposal(env: Env, proposal_id: u64) -> Result<(), DaoError> {
     proposal.status = ProposalStatus::Executed;
     env.storage()
         .persistent()
-        .set(&DataKey::Proposal(proposal_id), &proposal);
+        .set(&DataKey::DaoProposal(proposal_id), &proposal);
 
     env.events().publish(
         (symbol_short!("dao"), symbol_short!("exec")),
@@ -458,13 +458,13 @@ pub fn cancel_proposal(env: Env, caller: Address, proposal_id: u64) -> Result<()
     let mut proposal: Proposal = env
         .storage()
         .persistent()
-        .get(&DataKey::Proposal(proposal_id))
+        .get(&DataKey::DaoProposal(proposal_id))
         .ok_or(DaoError::ProposalNotFound)?;
 
     let admin: Address = env
         .storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::DaoAdmin)
         .ok_or(DaoError::NotInitialized)?;
 
     // Only proposer or admin can cancel.
@@ -479,7 +479,7 @@ pub fn cancel_proposal(env: Env, caller: Address, proposal_id: u64) -> Result<()
     proposal.status = ProposalStatus::Cancelled;
     env.storage()
         .persistent()
-        .set(&DataKey::Proposal(proposal_id), &proposal);
+        .set(&DataKey::DaoProposal(proposal_id), &proposal);
 
     env.events().publish(
         (symbol_short!("dao"), symbol_short!("canc")),
@@ -493,7 +493,7 @@ pub fn cancel_proposal(env: Env, caller: Address, proposal_id: u64) -> Result<()
 pub fn get_proposal(env: Env, proposal_id: u64) -> Result<Proposal, DaoError> {
     env.storage()
         .persistent()
-        .get(&DataKey::Proposal(proposal_id))
+        .get(&DataKey::DaoProposal(proposal_id))
         .ok_or(DaoError::ProposalNotFound)
 }
 

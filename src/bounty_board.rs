@@ -13,11 +13,11 @@ pub const MAX_ACTIVE_BOUNTIES: u32 = 20;
 #[contracttype]
 pub enum BountyKey {
     /// Auto-incrementing bounty ID counter.
-    Counter,
+    BountyCounter,
     /// Bounty data keyed by bounty ID.
     Bounty(u64),
     /// Admin address authorized to approve high-value bounties.
-    Admin,
+    BountyAdmin,
     /// Global bounty expiry duration (seconds).
     Expiry,
 }
@@ -88,11 +88,13 @@ pub struct Bounty {
 /// Initialize bounty board with admin and default expiry.
 pub fn initialize_bounty_board(env: &Env, admin: &Address) {
     admin.require_auth();
-    env.storage().instance().set(&BountyKey::Admin, admin);
+    env.storage().instance().set(&BountyKey::BountyAdmin, admin);
     env.storage()
         .instance()
         .set(&BountyKey::Expiry, &DEFAULT_BOUNTY_EXPIRY);
-    env.storage().instance().set(&BountyKey::Counter, &0u64);
+    env.storage()
+        .instance()
+        .set(&BountyKey::BountyCounter, &0u64);
 }
 
 /// Set bounty expiry duration. Admin-only.
@@ -105,7 +107,7 @@ pub fn set_bounty_expiry(
     if env
         .storage()
         .instance()
-        .get::<BountyKey, Address>(&BountyKey::Admin)
+        .get::<BountyKey, Address>(&BountyKey::BountyAdmin)
         != Some(admin.clone())
     {
         return Err(BountyError::NotAuthorized);
@@ -133,14 +135,16 @@ pub fn post_bounty(
     let counter: u64 = env
         .storage()
         .instance()
-        .get(&BountyKey::Counter)
+        .get(&BountyKey::BountyCounter)
         .unwrap_or(0);
     if counter >= MAX_ACTIVE_BOUNTIES as u64 {
         return Err(BountyError::TooManyActiveBounties);
     }
 
     let next_id = counter + 1;
-    env.storage().instance().set(&BountyKey::Counter, &next_id);
+    env.storage()
+        .instance()
+        .set(&BountyKey::BountyCounter, &next_id);
 
     let expiry_seconds: u64 = env
         .storage()

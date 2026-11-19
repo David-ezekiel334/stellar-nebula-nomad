@@ -112,7 +112,7 @@ pub struct GlobalStakingStats {
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
-    Admin,
+    StakingAdmin,
     TokenAddress,
     MinStake,
     LockDurationLedgers,
@@ -470,11 +470,11 @@ pub fn initialize(
 ) -> Result<(), StakingError> {
     admin.require_auth();
 
-    if env.storage().instance().has(&DataKey::Admin) {
+    if env.storage().instance().has(&DataKey::StakingAdmin) {
         return Err(StakingError::AlreadyInitialized);
     }
 
-    env.storage().instance().set(&DataKey::Admin, &admin);
+    env.storage().instance().set(&DataKey::StakingAdmin, &admin);
     env.storage()
         .instance()
         .set(&DataKey::TokenAddress, &token_address);
@@ -1010,7 +1010,7 @@ pub fn slash_stake(
     let stored: Address = env
         .storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::StakingAdmin)
         .ok_or(StakingError::NotInitialized)?;
     if stored != *admin {
         return Err(StakingError::Unauthorized);

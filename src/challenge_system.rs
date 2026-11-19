@@ -21,7 +21,7 @@ pub enum ChallengeFrequency {
 #[contracttype]
 pub enum ChallengeKey {
     /// Active challenge: challenge_id -> Challenge
-    Challenge(u64),
+    ChallengeSysChallenge(u64),
     /// Player progress: (profile_id, challenge_id) -> ChallengeProgress
     Progress(u64, u64),
     /// Daily challenges for a day: day -> Vec<u64>
@@ -88,7 +88,10 @@ pub fn create_challenge(
         return Err(ChallengeError::InvalidTarget);
     }
 
-    let id = env.ledger().timestamp().wrapping_add(env.ledger().sequence() as u64);
+    let id = env
+        .ledger()
+        .timestamp()
+        .wrapping_add(env.ledger().sequence() as u64);
     let timestamp = env.ledger().timestamp();
 
     let challenge = Challenge {
@@ -103,13 +106,17 @@ pub fn create_challenge(
         ends_at: timestamp + duration_hours * 3600,
     };
 
-    env.storage().persistent().set(&ChallengeKey::Challenge(id), &challenge);
+    env.storage()
+        .persistent()
+        .set(&ChallengeKey::ChallengeSysChallenge(id), &challenge);
     Ok(id)
 }
 
 /// Get a challenge by ID.
 pub fn get_challenge(env: &Env, challenge_id: u64) -> Option<Challenge> {
-    env.storage().persistent().get(&ChallengeKey::Challenge(challenge_id))
+    env.storage()
+        .persistent()
+        .get(&ChallengeKey::ChallengeSysChallenge(challenge_id))
 }
 
 /// Update player progress on a challenge.
@@ -119,8 +126,7 @@ pub fn update_progress(
     challenge_id: u64,
     increment: u64,
 ) -> Result<ChallengeProgress, ChallengeError> {
-    let challenge = get_challenge(env, challenge_id)
-        .ok_or(ChallengeError::ChallengeNotFound)?;
+    let challenge = get_challenge(env, challenge_id).ok_or(ChallengeError::ChallengeNotFound)?;
 
     let key = ChallengeKey::Progress(profile_id, challenge_id);
     let mut progress = env
@@ -151,13 +157,8 @@ pub fn update_progress(
 }
 
 /// Claim a completed challenge's XP reward.
-pub fn claim_reward(
-    env: &Env,
-    profile_id: u64,
-    challenge_id: u64,
-) -> Result<u64, ChallengeError> {
-    let challenge = get_challenge(env, challenge_id)
-        .ok_or(ChallengeError::ChallengeNotFound)?;
+pub fn claim_reward(env: &Env, profile_id: u64, challenge_id: u64) -> Result<u64, ChallengeError> {
+    let challenge = get_challenge(env, challenge_id).ok_or(ChallengeError::ChallengeNotFound)?;
 
     let key = ChallengeKey::Progress(profile_id, challenge_id);
     let mut progress = env

@@ -8,7 +8,7 @@ pub const MIN_ORACLE_SOURCES: u32 = 1;
 #[derive(Clone)]
 #[contracttype]
 pub enum OracleKey {
-    Admin,
+    OracleAdmin,
     ResourcePrice(Symbol), // resource -> PriceData
     PriceHistory(Symbol),  // resource -> Vec<PriceData> (last 24h)
     OracleSources,         // -> Vec<Address>
@@ -84,7 +84,9 @@ pub fn initialize_oracle(
         return Err(OracleError::NoOracleSources);
     }
 
-    env.storage().instance().set(&OracleKey::Admin, &admin);
+    env.storage()
+        .instance()
+        .set(&OracleKey::OracleAdmin, &admin);
     env.storage()
         .persistent()
         .set(&OracleKey::OracleSources, &sources);
@@ -109,7 +111,7 @@ pub fn update_resource_price(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&OracleKey::Admin)
+        .get(&OracleKey::OracleAdmin)
         .ok_or(OracleError::Unauthorized)?;
 
     if admin != stored_admin {
@@ -234,7 +236,7 @@ pub fn add_oracle_source(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&OracleKey::Admin)
+        .get(&OracleKey::OracleAdmin)
         .ok_or(OracleError::Unauthorized)?;
 
     if admin != stored_admin {
@@ -276,7 +278,7 @@ pub fn register_price_trigger(
     let stored_admin: Address = env
         .storage()
         .persistent()
-        .get(&OracleKey::Admin)
+        .get(&OracleKey::OracleAdmin)
         .ok_or(OracleError::Unauthorized)?;
 
     if admin != stored_admin {
@@ -362,7 +364,7 @@ pub fn disable_trigger(env: &Env, admin: Address, trigger_id: u64) -> Result<(),
     let stored_admin: Address = env
         .storage()
         .persistent()
-        .get(&OracleKey::Admin)
+        .get(&OracleKey::OracleAdmin)
         .ok_or(OracleError::Unauthorized)?;
 
     if admin != stored_admin {

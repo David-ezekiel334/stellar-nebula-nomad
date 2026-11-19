@@ -16,11 +16,11 @@ fn fuzz_tournament_entry_fee_zero_rejected() {
 fn fuzz_tournament_max_participants_boundary() {
     const MAX_PARTICIPANTS: u32 = 256;
     let cases: Vec<(u32, bool)> = vec![
-        (0, false),                     // zero participants invalid
-        (1, true),                      // minimum valid
-        (MAX_PARTICIPANTS, true),       // at limit valid
-        (MAX_PARTICIPANTS + 1, false),  // over limit invalid
-        (u32::MAX, false),              // max u32 invalid
+        (0, false),                    // zero participants invalid
+        (1, true),                     // minimum valid
+        (MAX_PARTICIPANTS, true),      // at limit valid
+        (MAX_PARTICIPANTS + 1, false), // over limit invalid
+        (u32::MAX, false),             // max u32 invalid
     ];
     for (count, expected) in cases {
         let valid = count >= 1 && count <= MAX_PARTICIPANTS;
@@ -52,7 +52,10 @@ fn fuzz_tournament_start_time_in_past_rejected() {
     for start in start_times {
         let valid = start > current_ledger;
         // All these values are <= current_ledger, so invalid.
-        assert!(!valid, "tournament start in past/present must be rejected: start={start}");
+        assert!(
+            !valid,
+            "tournament start in past/present must be rejected: start={start}"
+        );
     }
 }
 
@@ -73,8 +76,10 @@ fn fuzz_tournament_bracket_size_power_of_two() {
         assert!(size.is_power_of_two(), "size={size} must be power of two");
     }
     for size in invalid_sizes {
-        assert!(!size.is_power_of_two() || size == 1,
-            "size={size} should not be a valid bracket size");
+        assert!(
+            !size.is_power_of_two() || size == 1,
+            "size={size} should not be a valid bracket size"
+        );
     }
 }
 
@@ -104,7 +109,10 @@ fn fuzz_pvp_damage_no_overflow() {
     for atk in &attack_powers {
         for mult in &multipliers {
             let result = (*atk as u64).checked_mul(*mult as u64);
-            assert!(result.is_some(), "damage overflow for atk={atk}, mult={mult}");
+            assert!(
+                result.is_some(),
+                "damage overflow for atk={atk}, mult={mult}"
+            );
         }
     }
 }
@@ -157,7 +165,7 @@ fn fuzz_crafting_ingredient_quantity_zero_rejected() {
 fn fuzz_crafting_ingredients_overflow_safe() {
     // Total ingredient cost = sum of (qty * unit_cost) for each ingredient.
     let ingredients: Vec<(u64, u64)> = vec![
-        (100, 10),    // qty=100, unit_cost=10
+        (100, 10), // qty=100, unit_cost=10
         (50, 25),
         (1, u64::MAX / 200), // large unit cost, small qty
     ];
@@ -213,7 +221,10 @@ fn fuzz_ship_upgrade_cost_no_overflow() {
         for level in &levels {
             let multiplier = (*level as u64).checked_add(1).unwrap();
             let total = cost.checked_mul(multiplier);
-            assert!(total.is_some(), "upgrade cost overflowed: cost={cost}, level={level}");
+            assert!(
+                total.is_some(),
+                "upgrade cost overflowed: cost={cost}, level={level}"
+            );
         }
     }
 }

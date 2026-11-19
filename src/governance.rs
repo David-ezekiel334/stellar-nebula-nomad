@@ -65,7 +65,7 @@ const VOTING_PERIOD: u64 = 86400 * 3; // 3 days
 #[derive(Clone)]
 #[contracttype]
 pub enum GovernanceDataKey {
-    Admin,
+    GovAdmin,
     DaoContract,
     GameParameter(Symbol),
 }
@@ -221,7 +221,7 @@ pub fn set_dao_contract(env: Env, admin: Address, dao_address: Address) -> Resul
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&GovernanceDataKey::Admin)
+        .get(&GovernanceDataKey::GovAdmin)
         .ok_or(GovError::NotAdmin)?;
 
     if admin != stored_admin {

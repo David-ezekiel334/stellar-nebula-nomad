@@ -4,7 +4,7 @@ use soroban_sdk::{contracterror, contracttype, symbol_short, Env, Symbol, Vec};
 #[contracttype]
 pub enum HealthKey {
     Metric(Symbol),
-    Registry,
+    HealthRegistry,
 }
 
 #[contracterror]
@@ -86,14 +86,14 @@ fn default_aggregate(value: u64, timestamp: u64) -> HealthAggregate {
 fn load_registry(env: &Env) -> Vec<Symbol> {
     env.storage()
         .persistent()
-        .get(&HealthKey::Registry)
+        .get(&HealthKey::HealthRegistry)
         .unwrap_or_else(|| Vec::new(env))
 }
 
 fn store_registry(env: &Env, registry: &Vec<Symbol>) {
     env.storage()
         .persistent()
-        .set(&HealthKey::Registry, registry);
+        .set(&HealthKey::HealthRegistry, registry);
 }
 
 fn record_metric(env: &Env, metric: Symbol, value: u64) -> HealthMetricSummary {

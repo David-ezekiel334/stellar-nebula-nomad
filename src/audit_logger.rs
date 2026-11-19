@@ -30,7 +30,7 @@ pub const MAX_PRUNE_BATCH: u32 = 100;
 #[derive(Clone)]
 #[contracttype]
 pub enum AuditLoggerKey {
-    Counter,
+    AuditCounter,
     Entry(u64),
     /// ID of the oldest entry not yet pruned.
     Oldest,
@@ -98,7 +98,7 @@ pub fn log_audit_event(
     let current_id: u64 = env
         .storage()
         .instance()
-        .get(&AuditLoggerKey::Counter)
+        .get(&AuditLoggerKey::AuditCounter)
         .unwrap_or(0);
 
     let entry = AuditEntry {
@@ -114,7 +114,7 @@ pub fn log_audit_event(
         .set(&AuditLoggerKey::Entry(current_id), &entry);
     env.storage()
         .instance()
-        .set(&AuditLoggerKey::Counter, &(current_id + 1));
+        .set(&AuditLoggerKey::AuditCounter, &(current_id + 1));
 
     env.events().publish(
         (symbol_short!("audit"), symbol_short!("entry")),
@@ -141,7 +141,7 @@ pub fn query_audit_logs(
     let total: u64 = env
         .storage()
         .instance()
-        .get(&AuditLoggerKey::Counter)
+        .get(&AuditLoggerKey::AuditCounter)
         .unwrap_or(0);
     let oldest = oldest_audit_id(env);
     let retained = total - oldest;
@@ -175,7 +175,7 @@ pub fn query_audit_logs(
 pub fn get_audit_count(env: &Env) -> u64 {
     env.storage()
         .instance()
-        .get(&AuditLoggerKey::Counter)
+        .get(&AuditLoggerKey::AuditCounter)
         .unwrap_or(0)
 }
 

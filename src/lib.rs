@@ -41,20 +41,20 @@ mod content_tools;
 pub mod error_standard;
 pub mod traits;
 
+mod elo_rating;
 mod gifting_system;
 mod leaderboards;
+mod matchmaking;
 mod nebula_explorer;
 mod onboarding_tutorial;
 mod player_profile;
 mod player_segmentation;
 mod pvp_combat;
-mod elo_rating;
-mod matchmaking;
-mod ship_abilities;
 mod referral_system;
 /// Rate-limited resource minting and the player balance ledger.
 pub mod resource_minter;
 mod session_manager;
+mod ship_abilities;
 mod ship_nft;
 mod ship_registry;
 
@@ -150,11 +150,16 @@ mod rewards;
 pub mod seasons;
 pub mod trading;
 
+/// Pure bracket / pairing algorithms behind the tournament formats (Issue #587).
+pub mod bracket_generator;
 pub mod crafting;
 /// Crafting recipe registry and recipe validation.
 pub mod recipes;
 mod ship_customization;
 mod skins;
+/// Tournaments: four formats, registration, scheduling, forfeits, prizes,
+/// admin controls and dispute resolution (Issues #284, #537, #587).
+pub mod tournament;
 /// Player notification dispatch: threshold alerts and push delivery.
 pub mod notifications {
     /// Threshold checks that raise player notifications (low resources, etc.).
@@ -182,18 +187,21 @@ mod ai_mission_engine;
 mod composability_examples;
 /// Cooperative guild quest tracking and reward distribution.
 pub mod guild_quests;
-mod input_validation;
+pub mod input_validation;
 mod nomad_bonding;
 mod player_housing;
 mod quest_system;
 mod reentrancy_guard;
 mod reputation;
+mod validation_macros;
 
 pub use reentrancy_guard::ReentrancyError;
 pub use reputation::{
     BehaviorRecord, BehaviorType, DisputeReport, ReportStatus, ReputationError, ReputationScore,
 };
 
+/// RBAC error type returned by the `init_rbac` / `grant_role` / `check_permission`
+/// family of contract entry points (Issue #586).
 pub use access_control::AccessControlError;
 pub use analytics::{AnalyticsError, GlobalStats};
 pub use blueprint_factory::{Blueprint, BlueprintError, BlueprintRarity};
@@ -248,15 +256,10 @@ pub use elo_rating::{
 // Issue #591 — MMR-based matchmaking with expanding range and abuse prevention.
 pub use matchmaking::{
     dequeue, enqueue, get_queue_status, is_queued, process_queue, queue_size, GameMode,
-    MatchResult, MatchmakingKey, QueueEntry, EXPAND_INTERVAL_SECS, MAX_QUEUE_WAIT_SECS,
-    MAX_TEAM_SIZE, MMR_EXPAND_STEP, MMR_INITIAL_RANGE, REQUEUE_COOLDOWN_SECS,
+    MatchResult as MatchmakingResult, MatchmakingKey, QueueEntry, EXPAND_INTERVAL_SECS,
+    MAX_QUEUE_WAIT_SECS, MAX_TEAM_SIZE, MMR_EXPAND_STEP, MMR_INITIAL_RANGE, REQUEUE_COOLDOWN_SECS,
 };
 // Issue #589 — Ship ability system with 5 abilities per ship type.
-pub use ship_abilities::{
-    get_abilities_for_type, get_ability_states, init_combat_abilities, is_ability_ready,
-    tick_cooldowns, use_ability, Ability, AbilityEffect, AbilityKey, AbilityState,
-    ShipAbilityLoadout, ABILITY_MAX_ENERGY, MAX_ABILITIES_PER_SHIP,
-};
 pub use referral_system::{Referral, ReferralError};
 pub use resource_minter::{
     balance_of, circulating_supply, credit_balance, debit_balance, move_balance, reduce_supply,
@@ -264,6 +267,11 @@ pub use resource_minter::{
     ResourceMinterContract, ResourceRecord, ResourceType,
 };
 pub use session_manager::{Session, SessionError};
+pub use ship_abilities::{
+    get_abilities_for_type, get_ability_states, init_combat_abilities, is_ability_ready,
+    tick_cooldowns, use_ability, Ability, AbilityEffect, AbilityKey, AbilityState,
+    ShipAbilityLoadout, ABILITY_MAX_ENERGY, MAX_ABILITIES_PER_SHIP,
+};
 pub use ship_nft::{DataKey as ShipDataKey, ShipError, ShipNft};
 pub use ship_registry::Ship;
 
@@ -1131,7 +1139,7 @@ impl NebulaNomadContract {
 
     /// Process the matchmaking queue for a game mode — returns matched pair
     /// or None. Prunes timed-out entries automatically.
-    pub fn mm_process(env: Env, mode: GameMode) -> Result<Option<MatchResult>, PvPError> {
+    pub fn mm_process(env: Env, mode: GameMode) -> Result<Option<MatchmakingResult>, PvPError> {
         matchmaking::process_queue(&env, mode)
     }
 
@@ -1182,6 +1190,7 @@ impl NebulaNomadContract {
 
     /// Initialise ability states for a player entering combat.
     pub fn init_combat_abilities(env: Env, combat_id: u64, player: Address, ship_type: Symbol) {
+        player.require_auth();
         ship_abilities::init_combat_abilities(&env, combat_id, &player, &ship_type)
     }
 
@@ -1193,6 +1202,7 @@ impl NebulaNomadContract {
         ship_type: Symbol,
         ability_id: Symbol,
     ) -> Result<(), PvPError> {
+        player.require_auth();
         ship_abilities::use_ability(&env, combat_id, &player, &ship_type, &ability_id)
     }
 
@@ -1203,6 +1213,7 @@ impl NebulaNomadContract {
 
     /// Tick all ability cooldowns down by 1 (call at start of player's turn).
     pub fn tick_ability_cooldowns(env: Env, combat_id: u64, player: Address) {
+        player.require_auth();
         ship_abilities::tick_cooldowns(&env, combat_id, &player)
     }
 
@@ -2790,6 +2801,60 @@ impl NebulaNomadContract {
         constellation_mapper::get_constellation_count(&env)
     }
 
+    /// Name a constellation, anchor it to a region and attach lore (recorder, once).
+    pub fn annotate_constellation(
+        env: Env,
+        recorder: Address,
+        constellation_id: u64,
+        name: String,
+        anchor_region: u64,
+        lore: String,
+    ) -> Result<constellation_mapper::ConstellationMeta, ConstellationError> {
+        constellation_mapper::annotate_constellation(
+            &env,
+            &recorder,
+            constellation_id,
+            name,
+            anchor_region,
+            lore,
+        )
+    }
+
+    /// Recognize a partial or noisy star observation.
+    pub fn recognize_constellation(
+        env: Env,
+        observed: Vec<BytesN<32>>,
+    ) -> Result<constellation_mapper::Recognition, ConstellationError> {
+        constellation_mapper::recognize_pattern(&env, &observed)
+    }
+
+    /// Recognize an observation and point toward its anchor region.
+    pub fn get_navigation_aid(
+        env: Env,
+        observed: Vec<BytesN<32>>,
+        current_region: u64,
+    ) -> Result<constellation_mapper::NavigationAid, ConstellationError> {
+        constellation_mapper::navigation_aid(&env, &observed, current_region)
+    }
+
+    /// Sight a constellation for discovery bonuses and collection progress.
+    pub fn sight_constellation(
+        env: Env,
+        observer: Address,
+        observed: Vec<BytesN<32>>,
+        region_id: u64,
+    ) -> Result<constellation_mapper::SightingResult, ConstellationError> {
+        constellation_mapper::sight_constellation(&env, &observer, &observed, region_id)
+    }
+
+    /// A player's constellation collection progress.
+    pub fn get_constellation_collection(
+        env: Env,
+        player: Address,
+    ) -> constellation_mapper::CollectionProgress {
+        constellation_mapper::get_collection(&env, &player)
+    }
+
     // ─── Quantum Entanglement Comms (Issue #73) ───────────────────────────
 
     /// Establish an entanglement pair between two ships.
@@ -2924,6 +2989,7 @@ impl NebulaNomadContract {
         player: Address,
         days: u32,
     ) -> Result<YieldForecast, ForecastError> {
+        player.require_auth();
         yield_forecast::generate_yield_forecast(&env, &player, days)
     }
 
@@ -2933,6 +2999,7 @@ impl NebulaNomadContract {
         player: Address,
         data_point: YieldDataPoint,
     ) -> Result<ModelParams, ForecastError> {
+        player.require_auth();
         yield_forecast::update_forecast_model(&env, &player, data_point)
     }
 
@@ -3069,6 +3136,46 @@ impl NebulaNomadContract {
     /// Verify wormhole link integrity.
     pub fn verify_wormhole_link(env: Env, wormhole_id: u64, provided_link: BytesN<32>) -> bool {
         wormhole_traveler::verify_wormhole_link(&env, wormhole_id, provided_link)
+    }
+
+    /// Jump through a wormhole and get the full outcome (risk, roll, exit).
+    pub fn jump_through_wormhole(
+        env: Env,
+        traveler: Address,
+        ship_id: u64,
+        wormhole_id: u64,
+    ) -> Result<wormhole_traveler::TravelOutcome, WormholeError> {
+        wormhole_traveler::jump_through_wormhole(&env, traveler, ship_id, wormhole_id)
+    }
+
+    /// Bail out back through the wormhole a ship just came through.
+    pub fn wormhole_emergency_exit(
+        env: Env,
+        traveler: Address,
+        ship_id: u64,
+    ) -> Result<wormhole_traveler::TravelOutcome, WormholeError> {
+        wormhole_traveler::emergency_exit(&env, traveler, ship_id)
+    }
+
+    /// Scan a nebula for wormholes; detected ones join the explorer's map.
+    pub fn scan_for_wormholes(env: Env, explorer: Address, nebula_id: u64) -> Vec<u64> {
+        wormhole_traveler::scan_for_wormholes(&env, explorer, nebula_id)
+    }
+
+    /// An explorer's wormhole map with live stability, risk and cost.
+    pub fn get_wormhole_map(
+        env: Env,
+        explorer: Address,
+    ) -> Vec<wormhole_traveler::WormholeMapEntry> {
+        wormhole_traveler::get_wormhole_map(&env, &explorer)
+    }
+
+    /// Open wormhole routes leaving a nebula.
+    pub fn get_wormhole_routes(
+        env: Env,
+        nebula_id: u64,
+    ) -> Vec<wormhole_traveler::WormholeMapEntry> {
+        wormhole_traveler::get_routes_from(&env, nebula_id)
     }
 
     // ─── Player Alliance and Faction System (Issue #79) ──────────────────
@@ -3694,6 +3801,7 @@ impl NebulaNomadContract {
         user: Address,
         amount: u64,
     ) -> Result<(u64, u64), AntiWhaleError> {
+        user.require_auth();
         economics::anti_whale::process_anti_whale_action(&env, &user, amount)
     }
 
@@ -3924,6 +4032,7 @@ impl NebulaNomadContract {
     }
 
     pub fn create_player_reputation(env: Env, player: Address) -> Result<(), ReputationError> {
+        player.require_auth();
         reputation::create_player_reputation(&env, &player)
     }
 
@@ -4309,6 +4418,137 @@ impl NebulaNomadContract {
     pub fn get_global_staking_stats(env: Env) -> GlobalStakingStats {
         staking::get_global_staking_stats(&env)
     }
+
+    // ─── Weather System (Issues #553, #630) ──────────────────────────────
+
+    /// Current weather in a region.
+    pub fn get_region_weather(env: Env, region_id: u64) -> weather_system::WeatherState {
+        weather_system::get_current_weather(&env, region_id)
+    }
+
+    /// 24-hour forecast for a region.
+    pub fn get_weather_forecast(env: Env, region_id: u64) -> Vec<weather_system::WeatherForecast> {
+        weather_system::generate_forecast(&env, region_id)
+    }
+
+    /// Effective weather modifiers in a region right now.
+    pub fn get_weather_effects(env: Env, region_id: u64) -> weather_system::WeatherImpact {
+        weather_system::get_weather_impact(&env, region_id)
+    }
+
+    /// Set a region's climate weights (admin only).
+    pub fn set_region_climate(
+        env: Env,
+        admin: Address,
+        region_id: u64,
+        weights: Vec<u32>,
+    ) -> Result<(), weather_system::WeatherError> {
+        weather_system::set_region_climate(&env, &admin, region_id, weights)
+    }
+
+    // ─── Player Housing (Issues #532, #629) ──────────────────────────────
+
+    /// Create a player's house (Small).
+    pub fn initialize_house(env: Env, owner: Address) -> Result<HouseInstance, HousingError> {
+        player_housing::initialize_house(&env, owner)
+    }
+
+    /// House, layout, displays, banner and storage in one read.
+    pub fn get_house_showcase(env: Env, owner: Address) -> Option<player_housing::HouseShowcase> {
+        player_housing::get_house_showcase(&env, &owner)
+    }
+
+    /// Set wall, floor and lighting themes.
+    pub fn customize_house(
+        env: Env,
+        owner: Address,
+        wall_theme: u32,
+        floor_theme: u32,
+        lighting_theme: u32,
+    ) -> Result<(), HousingError> {
+        player_housing::customize_theme(&env, owner, wall_theme, floor_theme, lighting_theme)
+    }
+
+    /// Buy furniture into storage.
+    pub fn buy_house_furniture(
+        env: Env,
+        owner: Address,
+        furniture_id: u64,
+    ) -> Result<(), HousingError> {
+        player_housing::purchase_furniture(&env, owner, furniture_id)
+    }
+
+    /// Place owned furniture.
+    pub fn place_house_furniture(
+        env: Env,
+        owner: Address,
+        furniture_id: u64,
+        x: u32,
+        y: u32,
+        rotation: u32,
+        layer: u32,
+    ) -> Result<(), HousingError> {
+        player_housing::place_furniture(&env, owner, furniture_id, x, y, rotation, layer)
+    }
+
+    /// Move placed furniture back into storage.
+    pub fn remove_house_furniture(
+        env: Env,
+        owner: Address,
+        furniture_id: u64,
+    ) -> Result<(), HousingError> {
+        player_housing::remove_furniture(&env, owner, furniture_id)
+    }
+
+    /// Buy the next storage expansion.
+    pub fn expand_house_storage(
+        env: Env,
+        owner: Address,
+    ) -> Result<player_housing::StorageSummary, HousingError> {
+        player_housing::expand_storage(&env, owner)
+    }
+
+    /// Show an unlocked achievement in a display case slot.
+    pub fn display_house_achievement(
+        env: Env,
+        owner: Address,
+        achievement_id: u64,
+        slot: u32,
+    ) -> Result<Vec<player_housing::AchievementDisplay>, HousingError> {
+        player_housing::display_achievement(&env, owner, achievement_id, slot)
+    }
+
+    /// Hang the owner's guild banner.
+    pub fn hang_guild_banner(
+        env: Env,
+        owner: Address,
+    ) -> Result<player_housing::GuildBanner, HousingError> {
+        player_housing::display_guild_banner(&env, owner)
+    }
+
+    /// Visit another player's house.
+    pub fn visit_house(
+        env: Env,
+        visitor: Address,
+        house_owner: Address,
+    ) -> Result<(), HousingError> {
+        player_housing::visit_house(&env, visitor, house_owner)
+    }
+
+    /// Rate a visited house (100-500).
+    pub fn rate_house(
+        env: Env,
+        visitor: Address,
+        house_owner: Address,
+        rating: u32,
+    ) -> Result<(), HousingError> {
+        player_housing::rate_house(&env, visitor, house_owner, rating)
+    }
+
+    /// Add a guest to a friends-only house.
+    pub fn add_house_guest(env: Env, owner: Address, guest: Address) -> Result<(), HousingError> {
+        player_housing::add_guest(&env, owner, guest)
+    }
 }
 
 // Game Systems Modules (Issues #528-531)
@@ -4317,9 +4557,9 @@ impl NebulaNomadContract {
 // visibility. Re-declaring any of them here breaks the crate (E0428, #572).
 
 // Game Systems Modules (Issues #550-553)
-pub mod weather_system;
 pub mod challenge_system;
 pub mod skin_marketplace;
+pub mod weather_system;
 /// On-chain mini-games (poker, racing) with their own session state.
 pub mod mini_games {
     pub mod poker;

@@ -28,21 +28,21 @@ pub const COMMUNITY_GOAL_INTERVAL: u64 = 30 * 24 * 60 * 60;
 #[contracttype]
 pub enum EventKey {
     /// Event data keyed by event ID.
-    Event(u64),
+    EventSchedEvent(u64),
     /// Global event counter.
-    EventCounter,
+    EventSchedEventCounter,
     /// Admin address for scheduling permissions.
-    Admin,
+    EventSchedAdmin,
     /// Active event IDs list.
     ActiveEvents,
     /// Burst counter for rate limiting.
-    BurstCounter,
+    EventSchedBurstCounter,
     /// Last execution timestamp for a recurring event type.
     RecurringLastRun(Symbol),
     /// Time-limited challenge data keyed by challenge ID.
-    Challenge(u64),
+    EventSchedChallenge(u64),
     /// Global challenge counter.
-    ChallengeCounter,
+    EventSchedChallengeCounter,
     /// Active challenge IDs for the current season.
     ActiveChallenges,
     /// Player progress toward a challenge: `(challenge_id, profile_id) -> u64`
@@ -294,7 +294,7 @@ fn require_admin(env: &Env, caller: &Address) -> Result<(), EventError> {
     let admin: Address = env
         .storage()
         .instance()
-        .get(&EventKey::Admin)
+        .get(&EventKey::EventSchedAdmin)
         .ok_or(EventError::Unauthorized)?;
 
     if caller != &admin {
@@ -311,10 +311,12 @@ fn next_event_id(env: &Env) -> u64 {
     let current: u64 = env
         .storage()
         .instance()
-        .get(&EventKey::EventCounter)
+        .get(&EventKey::EventSchedEventCounter)
         .unwrap_or(0);
     let next = current + 1;
-    env.storage().instance().set(&EventKey::EventCounter, &next);
+    env.storage()
+        .instance()
+        .set(&EventKey::EventSchedEventCounter, &next);
     next
 }
 
@@ -322,12 +324,12 @@ fn next_challenge_id(env: &Env) -> u64 {
     let current: u64 = env
         .storage()
         .instance()
-        .get(&EventKey::ChallengeCounter)
+        .get(&EventKey::EventSchedChallengeCounter)
         .unwrap_or(0);
     let next = current + 1;
     env.storage()
         .instance()
-        .set(&EventKey::ChallengeCounter, &next);
+        .set(&EventKey::EventSchedChallengeCounter, &next);
     next
 }
 
@@ -335,7 +337,7 @@ fn check_burst_limit(env: &Env) -> Result<(), EventError> {
     let counter: u32 = env
         .storage()
         .instance()
-        .get(&EventKey::BurstCounter)
+        .get(&EventKey::EventSchedBurstCounter)
         .unwrap_or(0);
 
     if counter >= MAX_ACTIVE_EVENTS {
@@ -344,13 +346,15 @@ fn check_burst_limit(env: &Env) -> Result<(), EventError> {
 
     env.storage()
         .instance()
-        .set(&EventKey::BurstCounter, &(counter + 1));
+        .set(&EventKey::EventSchedBurstCounter, &(counter + 1));
     Ok(())
 }
 
 /// Reset burst counter.
 pub fn reset_burst_counter(env: &Env) {
-    env.storage().instance().set(&EventKey::BurstCounter, &0u32);
+    env.storage()
+        .instance()
+        .set(&EventKey::EventSchedBurstCounter, &0u32);
 }
 
 fn add_to_active_events(env: &Env, event_id: u64) -> Result<(), EventError> {
@@ -396,14 +400,18 @@ fn remove_from_active_events(env: &Env, event_id: u64) {
 /// Initialize the event scheduler with an admin address.
 pub fn initialize_scheduler(env: &Env, admin: &Address) {
     admin.require_auth();
-    env.storage().instance().set(&EventKey::Admin, admin);
-    env.storage().instance().set(&EventKey::EventCounter, &0u64);
+    env.storage()
+        .instance()
+        .set(&EventKey::EventSchedAdmin, admin);
+    env.storage()
+        .instance()
+        .set(&EventKey::EventSchedEventCounter, &0u64);
     env.storage()
         .instance()
         .set(&EventKey::ActiveEvents, &Vec::<u64>::new(env));
     env.storage()
         .instance()
-        .set(&EventKey::ChallengeCounter, &0u64);
+        .set(&EventKey::EventSchedChallengeCounter, &0u64);
     env.storage()
         .instance()
         .set(&EventKey::ActiveChallenges, &Vec::<u64>::new(env));
@@ -486,7 +494,7 @@ fn schedule_event_authorized(
 
     env.storage()
         .instance()
-        .set(&EventKey::Event(event_id), &event);
+        .set(&EventKey::EventSchedEvent(event_id), &event);
 
     add_to_active_events(env, event_id)?;
 
@@ -544,7 +552,7 @@ pub fn trigger_scheduled_event(env: &Env, event_id: u64) -> Result<EventResult, 
     let mut event: ScheduledEvent = env
         .storage()
         .instance()
-        .get(&EventKey::Event(event_id))
+        .get(&EventKey::EventSchedEvent(event_id))
         .ok_or(EventError::EventNotFound)?;
 
     if event.executed {
@@ -560,7 +568,7 @@ pub fn trigger_scheduled_event(env: &Env, event_id: u64) -> Result<EventResult, 
     event.executed = true;
     env.storage()
         .instance()
-        .set(&EventKey::Event(event_id), &event);
+        .set(&EventKey::EventSchedEvent(event_id), &event);
 
     remove_from_active_events(env, event_id);
 
@@ -589,7 +597,7 @@ pub fn cancel_event(env: &Env, admin: &Address, event_id: u64) -> Result<(), Eve
     let mut event: ScheduledEvent = env
         .storage()
         .instance()
-        .get(&EventKey::Event(event_id))
+        .get(&EventKey::EventSchedEvent(event_id))
         .ok_or(EventError::EventNotFound)?;
 
     if event.executed {
@@ -599,7 +607,7 @@ pub fn cancel_event(env: &Env, admin: &Address, event_id: u64) -> Result<(), Eve
     event.executed = true;
     env.storage()
         .instance()
-        .set(&EventKey::Event(event_id), &event);
+        .set(&EventKey::EventSchedEvent(event_id), &event);
 
     remove_from_active_events(env, event_id);
 
@@ -662,7 +670,7 @@ fn register_challenge(env: &Env, mut challenge: TimeLimitedChallenge) -> Result<
 
     env.storage()
         .instance()
-        .set(&EventKey::Challenge(challenge_id), &challenge);
+        .set(&EventKey::EventSchedChallenge(challenge_id), &challenge);
 
     active.push_back(challenge_id);
     env.storage()
@@ -695,7 +703,7 @@ pub fn record_challenge_progress(
     let mut challenge: TimeLimitedChallenge = env
         .storage()
         .instance()
-        .get(&EventKey::Challenge(challenge_id))
+        .get(&EventKey::EventSchedChallenge(challenge_id))
         .ok_or(EventError::ChallengeNotFound)?;
 
     let now = get_current_timestamp(env);
@@ -733,7 +741,7 @@ pub fn record_challenge_progress(
     env.storage().persistent().set(&prog_key, &prog);
     env.storage()
         .instance()
-        .set(&EventKey::Challenge(challenge_id), &challenge);
+        .set(&EventKey::EventSchedChallenge(challenge_id), &challenge);
 
     if just_completed {
         env.events().publish(
@@ -763,7 +771,7 @@ pub fn claim_challenge_reward(
     let challenge: TimeLimitedChallenge = env
         .storage()
         .instance()
-        .get(&EventKey::Challenge(challenge_id))
+        .get(&EventKey::EventSchedChallenge(challenge_id))
         .ok_or(EventError::ChallengeNotFound)?;
 
     let now = get_current_timestamp(env);
@@ -826,7 +834,7 @@ pub fn get_active_challenges(env: &Env) -> Vec<u64> {
             if let Some(challenge) = env
                 .storage()
                 .instance()
-                .get::<EventKey, TimeLimitedChallenge>(&EventKey::Challenge(id))
+                .get::<EventKey, TimeLimitedChallenge>(&EventKey::EventSchedChallenge(id))
             {
                 if now <= challenge.end_time {
                     active.push_back(id);
@@ -860,7 +868,7 @@ pub fn expire_challenges(env: &Env, admin: &Address) -> Result<u32, EventError> 
             let keep = env
                 .storage()
                 .instance()
-                .get::<EventKey, TimeLimitedChallenge>(&EventKey::Challenge(id))
+                .get::<EventKey, TimeLimitedChallenge>(&EventKey::EventSchedChallenge(id))
                 .is_some_and(|c| now <= c.end_time + grace);
 
             if keep {
@@ -889,13 +897,13 @@ pub fn update_participants(
     let mut event: ScheduledEvent = env
         .storage()
         .instance()
-        .get(&EventKey::Event(event_id))
+        .get(&EventKey::EventSchedEvent(event_id))
         .ok_or(EventError::EventNotFound)?;
 
     event.participants = participant_count;
     env.storage()
         .instance()
-        .set(&EventKey::Event(event_id), &event);
+        .set(&EventKey::EventSchedEvent(event_id), &event);
 
     Ok(())
 }
@@ -906,7 +914,7 @@ pub fn update_participants(
 pub fn get_event(env: &Env, event_id: u64) -> Result<ScheduledEvent, EventError> {
     env.storage()
         .instance()
-        .get(&EventKey::Event(event_id))
+        .get(&EventKey::EventSchedEvent(event_id))
         .ok_or(EventError::EventNotFound)
 }
 
@@ -914,7 +922,7 @@ pub fn get_event(env: &Env, event_id: u64) -> Result<ScheduledEvent, EventError>
 pub fn get_challenge(env: &Env, challenge_id: u64) -> Result<TimeLimitedChallenge, EventError> {
     env.storage()
         .instance()
-        .get(&EventKey::Challenge(challenge_id))
+        .get(&EventKey::EventSchedChallenge(challenge_id))
         .ok_or(EventError::ChallengeNotFound)
 }
 
@@ -950,7 +958,7 @@ pub fn schedule_weekly_festival(
 pub fn get_event_count(env: &Env) -> u64 {
     env.storage()
         .instance()
-        .get(&EventKey::EventCounter)
+        .get(&EventKey::EventSchedEventCounter)
         .unwrap_or(0)
 }
 

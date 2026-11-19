@@ -14,7 +14,7 @@ pub const MIN_SHARE_SIZE: u32 = 1;
 #[contracttype]
 pub enum DataKey {
     /// Admin address.
-    Admin,
+    FracResAdmin,
     /// Global share ID counter.
     ShareCounter,
     /// Fractional share data keyed by share ID.
@@ -128,7 +128,7 @@ impl FractionalConfig {
 pub fn initialize(env: &Env, admin: &Address) -> Result<(), FractionalError> {
     admin.require_auth();
 
-    env.storage().instance().set(&DataKey::Admin, admin);
+    env.storage().instance().set(&DataKey::FracResAdmin, admin);
     env.storage()
         .instance()
         .set::<DataKey, u64>(&DataKey::ShareCounter, &0);
@@ -479,7 +479,7 @@ pub fn update_config(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::FracResAdmin)
         .ok_or(FractionalError::Unauthorized)?;
 
     if admin != &stored_admin {

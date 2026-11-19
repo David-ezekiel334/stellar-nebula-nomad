@@ -33,7 +33,7 @@ pub enum BotKey {
     /// CAPTCHA challenge: (player, challenge_id) → challenge data.
     CaptchaChallenge(Address, u64),
     /// Global challenge counter.
-    ChallengeCounter,
+    BotChallengeCounter,
     /// Player trust level (0=untrusted, 1=normal, 2=trusted).
     TrustLevel(Address),
     /// Flagged pattern count per player.
@@ -253,12 +253,12 @@ pub fn issue_captcha(
     let challenge_id: u64 = env
         .storage()
         .instance()
-        .get(&BotKey::ChallengeCounter)
+        .get(&BotKey::BotChallengeCounter)
         .unwrap_or(0)
         + 1;
     env.storage()
         .instance()
-        .set(&BotKey::ChallengeCounter, &challenge_id);
+        .set(&BotKey::BotChallengeCounter, &challenge_id);
 
     let now = env.ledger().timestamp();
     let challenge = CaptchaChallengeData {

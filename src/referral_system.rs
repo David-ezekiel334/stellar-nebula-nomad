@@ -344,7 +344,7 @@ pub enum ReferralV2Key {
     FingerprintHash(u64),
     /// Global analytics.
     TotalReferrals,
-    TotalRewardsDistributed,
+    ReferralTotalRewardsDistributed,
 }
 
 /// Tier configuration for multi-tier rewards.
@@ -575,10 +575,10 @@ pub fn claim_referral_reward_v2(
     // Update global rewards.
     let instance = env.storage().instance();
     let total: i128 = instance
-        .get(&ReferralV2Key::TotalRewardsDistributed)
+        .get(&ReferralV2Key::ReferralTotalRewardsDistributed)
         .unwrap_or(0);
     instance.set(
-        &ReferralV2Key::TotalRewardsDistributed,
+        &ReferralV2Key::ReferralTotalRewardsDistributed,
         &(total + base_reward + bonus),
     );
 
@@ -602,7 +602,7 @@ pub fn get_global_stats(env: &Env) -> (u64, i128) {
     let total_rewards: i128 = env
         .storage()
         .instance()
-        .get(&ReferralV2Key::TotalRewardsDistributed)
+        .get(&ReferralV2Key::ReferralTotalRewardsDistributed)
         .unwrap_or(0);
     (total_referrals, total_rewards)
 }

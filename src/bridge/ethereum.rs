@@ -18,7 +18,7 @@ pub const LOCK_PERIOD_SECS: u64 = 43_200;
 #[contracttype]
 pub enum BridgeKey {
     /// Bridge configuration (fee bps, paused state)
-    Config,
+    EthConfig,
     /// Locked assets: (asset_id, amount) mapping
     LockedAssets(BytesN<32>),
     /// Wrapped assets on Stellar: original_chain -> original_asset -> wrapped_asset
@@ -28,7 +28,7 @@ pub enum BridgeKey {
     /// Transfer counter for ID generation
     TransferCount,
     /// Bridge admin address
-    Admin,
+    EthAdmin,
     /// Total fees collected
     TotalFeesCollected,
 }
@@ -145,8 +145,8 @@ pub fn initialize_bridge(env: &Env, admin: &Address, fee_bps: u32) -> Result<(),
         min_amount: MIN_BRIDGE_AMOUNT,
     };
     
-    env.storage().instance().set(&BridgeKey::Config, &config);
-    env.storage().instance().set(&BridgeKey::Admin, admin);
+    env.storage().instance().set(&BridgeKey::EthConfig, &config);
+    env.storage().instance().set(&BridgeKey::EthAdmin, admin);
     env.storage().instance().set(&BridgeKey::TransferCount, &0u64);
     env.storage().instance().set(&BridgeKey::TotalFeesCollected, &0i128);
     
@@ -172,7 +172,7 @@ pub fn lock_assets(
     let config: BridgeConfig = env
         .storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::EthConfig)
         .ok_or(BridgeError::NotAuthorized)?;
     
     if config.paused {
@@ -261,7 +261,7 @@ pub fn mint_wrapped(
     let config: BridgeConfig = env
         .storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::EthConfig)
         .ok_or(BridgeError::NotAuthorized)?;
     
     if config.paused {
@@ -321,7 +321,7 @@ pub fn unlock_assets(
     let config: BridgeConfig = env
         .storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::EthConfig)
         .ok_or(BridgeError::NotAuthorized)?;
     
     if config.paused {
@@ -387,7 +387,7 @@ pub fn set_bridge_fee(env: &Env, admin: &Address, fee_bps: u32) -> Result<(), Br
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&BridgeKey::Admin)
+        .get(&BridgeKey::EthAdmin)
         .ok_or(BridgeError::NotAuthorized)?;
     
     if *admin != stored_admin {
@@ -401,11 +401,11 @@ pub fn set_bridge_fee(env: &Env, admin: &Address, fee_bps: u32) -> Result<(), Br
     let mut config: BridgeConfig = env
         .storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::EthConfig)
         .ok_or(BridgeError::NotAuthorized)?;
     
     config.fee_bps = fee_bps;
-    env.storage().instance().set(&BridgeKey::Config, &config);
+    env.storage().instance().set(&BridgeKey::EthConfig, &config);
     
     env.events().publish(
         (symbol_short!("bridge"), symbol_short!("fee_set")),
@@ -422,7 +422,7 @@ pub fn set_bridge_paused(env: &Env, admin: &Address, paused: bool) -> Result<(),
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&BridgeKey::Admin)
+        .get(&BridgeKey::EthAdmin)
         .ok_or(BridgeError::NotAuthorized)?;
     
     if *admin != stored_admin {
@@ -432,11 +432,11 @@ pub fn set_bridge_paused(env: &Env, admin: &Address, paused: bool) -> Result<(),
     let mut config: BridgeConfig = env
         .storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::EthConfig)
         .ok_or(BridgeError::NotAuthorized)?;
     
     config.paused = paused;
-    env.storage().instance().set(&BridgeKey::Config, &config);
+    env.storage().instance().set(&BridgeKey::EthConfig, &config);
     
     env.events().publish(
         (symbol_short!("bridge"), symbol_short!("paused")),
@@ -448,7 +448,7 @@ pub fn set_bridge_paused(env: &Env, admin: &Address, paused: bool) -> Result<(),
 
 /// Get bridge configuration
 pub fn get_bridge_config(env: &Env) -> Option<BridgeConfig> {
-    env.storage().instance().get(&BridgeKey::Config)
+    env.storage().instance().get(&BridgeKey::EthConfig)
 }
 
 /// Get transfer by ID

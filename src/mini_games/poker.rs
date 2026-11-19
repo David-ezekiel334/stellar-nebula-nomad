@@ -91,7 +91,10 @@ pub fn create_game(
     max_players: u32,
 ) -> Result<u64, PokerError> {
     creator.require_auth();
-    let id = env.ledger().timestamp().wrapping_add(env.ledger().sequence() as u64);
+    let id = env
+        .ledger()
+        .timestamp()
+        .wrapping_add(env.ledger().sequence() as u64);
 
     let mut players = Vec::new(env);
     players.push_back(creator.clone());
@@ -132,7 +135,9 @@ pub fn join_game(env: &Env, player: &Address, game_id: u64) -> Result<(), PokerE
     }
 
     game.players.push_back(player.clone());
-    env.storage().persistent().set(&PokerKey::Game(game_id), &game);
+    env.storage()
+        .persistent()
+        .set(&PokerKey::Game(game_id), &game);
     Ok(())
 }
 

@@ -20,19 +20,29 @@ struct Ledger {
 
 impl Ledger {
     fn new() -> Self {
-        Self { balances: HashMap::new(), total_supply: 0 }
+        Self {
+            balances: HashMap::new(),
+            total_supply: 0,
+        }
     }
 
     fn mint(&mut self, account: &str, amount: u64) -> Result<(), &'static str> {
-        if amount == 0 { return Err("zero mint"); }
-        let new_supply = self.total_supply.checked_add(amount).ok_or("supply overflow")?;
+        if amount == 0 {
+            return Err("zero mint");
+        }
+        let new_supply = self
+            .total_supply
+            .checked_add(amount)
+            .ok_or("supply overflow")?;
         *self.balances.entry(account.to_string()).or_insert(0) += amount;
         self.total_supply = new_supply;
         Ok(())
     }
 
     fn transfer(&mut self, from: &str, to: &str, amount: u64) -> Result<(), &'static str> {
-        if amount == 0 { return Err("zero transfer"); }
+        if amount == 0 {
+            return Err("zero transfer");
+        }
         let from_bal = self.balances.get(from).copied().unwrap_or(0);
         let to_bal = self.balances.get(to).copied().unwrap_or(0);
 
@@ -46,8 +56,11 @@ impl Ledger {
 
     fn assert_invariant(&self) {
         let sum: u64 = self.balances.values().sum();
-        assert_eq!(sum, self.total_supply,
-            "invariant broken: sum of balances ({sum}) != total supply ({})", self.total_supply);
+        assert_eq!(
+            sum, self.total_supply,
+            "invariant broken: sum of balances ({sum}) != total supply ({})",
+            self.total_supply
+        );
     }
 }
 
@@ -111,13 +124,22 @@ struct Ship {
 
 impl Ship {
     fn new(id: u64, owner: &str) -> Self {
-        Self { id, owner: owner.to_string(), level: 1, scan_range: 10 }
+        Self {
+            id,
+            owner: owner.to_string(),
+            level: 1,
+            scan_range: 10,
+        }
     }
 
     fn upgrade(&mut self, new_owner: &str) -> Result<(), &'static str> {
-        if self.owner != new_owner { return Err("not owner"); }
+        if self.owner != new_owner {
+            return Err("not owner");
+        }
         const MAX_LEVEL: u32 = 100;
-        if self.level >= MAX_LEVEL { return Err("max level"); }
+        if self.level >= MAX_LEVEL {
+            return Err("max level");
+        }
         self.level = self.level.checked_add(1).ok_or("level overflow")?;
         self.scan_range = self.scan_range.checked_add(5).ok_or("range overflow")?;
         Ok(())
@@ -173,7 +195,9 @@ fn chaos_corruption_ship_owner_transfer_does_not_duplicate() {
         to: &str,
     ) -> Result<(), &'static str> {
         let ship = registry.get_mut(&ship_id).ok_or("ship not found")?;
-        if ship.owner != from { return Err("not owner"); }
+        if ship.owner != from {
+            return Err("not owner");
+        }
         ship.owner = to.to_string();
         Ok(())
     }
@@ -224,7 +248,11 @@ fn chaos_corruption_leaderboard_no_duplicate_ranks() {
     // All ranks unique.
     let names: Vec<&str> = sorted.iter().map(|(n, _)| n.as_str()).collect();
     let unique_names: std::collections::HashSet<&str> = names.iter().cloned().collect();
-    assert_eq!(names.len(), unique_names.len(), "no duplicate entries in leaderboard");
+    assert_eq!(
+        names.len(),
+        unique_names.len(),
+        "no duplicate entries in leaderboard"
+    );
 }
 
 #[test]
@@ -244,7 +272,9 @@ fn chaos_corruption_reentrancy_guard_prevents_double_entry() {
     let mut locked = false;
 
     fn guarded_operation(locked: &mut bool) -> Result<(), &'static str> {
-        if *locked { return Err("reentrancy detected"); }
+        if *locked {
+            return Err("reentrancy detected");
+        }
         *locked = true;
         // ... operation runs here ...
         *locked = false;
@@ -265,7 +295,9 @@ fn chaos_corruption_reentrancy_guard_resets_after_success() {
     let mut locked = false;
 
     fn guarded_op(locked: &mut bool) -> Result<(), &'static str> {
-        if *locked { return Err("reentrant"); }
+        if *locked {
+            return Err("reentrant");
+        }
         *locked = true;
         // Operation succeeds.
         *locked = false;
@@ -274,6 +306,9 @@ fn chaos_corruption_reentrancy_guard_resets_after_success() {
 
     guarded_op(&mut locked).unwrap();
     // Guard must be reset — subsequent calls must succeed.
-    assert!(!locked, "reentrancy guard must be cleared after successful execution");
+    assert!(
+        !locked,
+        "reentrancy guard must be cleared after successful execution"
+    );
     guarded_op(&mut locked).unwrap();
 }

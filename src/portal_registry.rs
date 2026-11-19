@@ -21,11 +21,11 @@ pub const BASE_TRAVEL_COST: i128 = 100;
 #[contracttype]
 pub enum PortalKey {
     /// Auto-incrementing portal ID counter.
-    Counter,
+    PortalCounter,
     /// Portal data keyed by portal ID.
     Portal(u64),
     /// Authorized registrar address.
-    Admin,
+    PortalAdmin,
 }
 
 // ─── Errors ─────────────────────────────────────────────────────────────────
@@ -107,8 +107,10 @@ fn travel_cost(stability_pct: u32) -> i128 {
 /// Initialize the portal registry with an admin address.
 pub fn initialize_portal_registry(env: &Env, admin: &Address) {
     admin.require_auth();
-    env.storage().instance().set(&PortalKey::Admin, admin);
-    env.storage().instance().set(&PortalKey::Counter, &0u64);
+    env.storage().instance().set(&PortalKey::PortalAdmin, admin);
+    env.storage()
+        .instance()
+        .set(&PortalKey::PortalCounter, &0u64);
 }
 
 /// Register a new portal between two nebulae (owner-only).
@@ -129,7 +131,7 @@ pub fn register_portal(
     let portal_id: u64 = env
         .storage()
         .instance()
-        .get(&PortalKey::Counter)
+        .get(&PortalKey::PortalCounter)
         .unwrap_or(0);
 
     let now = env.ledger().timestamp();
@@ -149,7 +151,7 @@ pub fn register_portal(
         .set(&PortalKey::Portal(portal_id), &portal);
     env.storage()
         .instance()
-        .set(&PortalKey::Counter, &(portal_id + 1));
+        .set(&PortalKey::PortalCounter, &(portal_id + 1));
 
     env.events().publish(
         (symbol_short!("portal"), symbol_short!("regist")),

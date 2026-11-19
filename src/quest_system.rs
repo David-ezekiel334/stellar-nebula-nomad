@@ -62,7 +62,7 @@ pub enum QuestKey {
     /// Auto-increment quest (node) ID counter.
     NodeCounter,
     /// Per-player state for one node.
-    State(Address, u64),
+    QuestState(Address, u64),
     /// Per-player progress through one chain.
     Progress(Address, u64),
     /// Quest IDs currently active for a player.
@@ -463,7 +463,7 @@ fn remove_active(env: &Env, player: &Address, quest_id: u64) {
 
 fn save_state(env: &Env, state: &QuestState) {
     env.storage().persistent().set(
-        &QuestKey::State(state.player.clone(), state.quest_id),
+        &QuestKey::QuestState(state.player.clone(), state.quest_id),
         state,
     );
 }
@@ -471,7 +471,7 @@ fn save_state(env: &Env, state: &QuestState) {
 fn load_state(env: &Env, player: &Address, quest_id: u64) -> Result<QuestState, QuestError> {
     env.storage()
         .persistent()
-        .get(&QuestKey::State(player.clone(), quest_id))
+        .get(&QuestKey::QuestState(player.clone(), quest_id))
         .ok_or(QuestError::QuestNotStarted)
 }
 
@@ -837,7 +837,7 @@ pub fn get_chain(env: &Env, chain_id: u64) -> Option<QuestChain> {
 pub fn get_quest_state(env: &Env, player: &Address, quest_id: u64) -> Option<QuestState> {
     env.storage()
         .persistent()
-        .get(&QuestKey::State(player.clone(), quest_id))
+        .get(&QuestKey::QuestState(player.clone(), quest_id))
 }
 
 /// Fetch a player's progress through one chain.

@@ -23,9 +23,9 @@ pub const MAX_GLOBAL_CHALLENGE_PARTICIPANTS: u32 = 10_000;
 #[contracttype]
 pub enum RealtimeKey {
     /// Active event by ID.
-    Event(u64),
+    RealtimeEvent(u64),
     /// Global event counter.
-    EventCounter,
+    RealtimeEventCounter,
     /// Event participants: event_id -> Vec<Address>.
     Participants(u64),
     /// Player event state: (event_id, player) -> PlayerEventState.
@@ -37,9 +37,9 @@ pub enum RealtimeKey {
     /// Global challenge progress: (event_id, player) -> u64.
     ChallengeProgress(u64, Address),
     /// Admin address.
-    Admin,
+    RealtimeAdmin,
     /// Event leaderboard: event_id -> Vec<EventLeaderboardEntry>.
-    Leaderboard(u64),
+    RealtimeLeaderboard(u64),
 }
 
 // ─── Data Types ───────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ fn require_admin(env: &Env, caller: &Address) -> Result<(), RealtimeError> {
     let admin: Address = env
         .storage()
         .instance()
-        .get(&RealtimeKey::Admin)
+        .get(&RealtimeKey::RealtimeAdmin)
         .ok_or(RealtimeError::Unauthorized)?;
     if caller != &admin {
         return Err(RealtimeError::Unauthorized);
@@ -227,12 +227,12 @@ fn next_event_id(env: &Env) -> u64 {
     let current: u64 = env
         .storage()
         .instance()
-        .get(&RealtimeKey::EventCounter)
+        .get(&RealtimeKey::RealtimeEventCounter)
         .unwrap_or(0);
     let next = current + 1;
     env.storage()
         .instance()
-        .set(&RealtimeKey::EventCounter, &next);
+        .set(&RealtimeKey::RealtimeEventCounter, &next);
     next
 }
 
@@ -240,7 +240,7 @@ fn get_event_status(env: &Env, event_id: u64) -> Result<EventStatus, RealtimeErr
     let event: RealtimeEvent = env
         .storage()
         .instance()
-        .get(&RealtimeKey::Event(event_id))
+        .get(&RealtimeKey::RealtimeEvent(event_id))
         .ok_or(RealtimeError::EventNotFound)?;
     Ok(event.status)
 }
@@ -250,10 +250,10 @@ fn get_event_status(env: &Env, event_id: u64) -> Result<EventStatus, RealtimeErr
 /// Initialize the realtime events system with an admin.
 pub fn initialize_realtime_events(env: &Env, admin: &Address) -> Result<(), RealtimeError> {
     admin.require_auth();
-    env.storage().instance().set(&RealtimeKey::Admin, admin);
+    env.storage().instance().set(&RealtimeKey::RealtimeAdmin, admin);
     env.storage()
         .instance()
-        .set(&RealtimeKey::EventCounter, &0u64);
+        .set(&RealtimeKey::RealtimeEventCounter, &0u64);
     Ok(())
 }
 
@@ -298,7 +298,7 @@ pub fn create_event(
 
     env.storage()
         .instance()
-        .set(&RealtimeKey::Event(event_id), &event);
+        .set(&RealtimeKey::RealtimeEvent(event_id), &event);
 
     env.events().publish(
         (symbol_short!("rt"), symbol_short!("created")),
@@ -315,7 +315,7 @@ pub fn start_event(env: &Env, admin: Address, event_id: u64) -> Result<(), Realt
     let mut event: RealtimeEvent = env
         .storage()
         .instance()
-        .get(&RealtimeKey::Event(event_id))
+        .get(&RealtimeKey::RealtimeEvent(event_id))
         .ok_or(RealtimeError::EventNotFound)?;
 
     if event.status != EventStatus::Setup {
@@ -327,7 +327,7 @@ pub fn start_event(env: &Env, admin: Address, event_id: u64) -> Result<(), Realt
 
     env.storage()
         .instance()
-        .set(&RealtimeKey::Event(event_id), &event);
+        .set(&RealtimeKey::RealtimeEvent(event_id), &event);
 
     env.events().publish(
         (symbol_short!("rt"), symbol_short!("started")),
@@ -344,7 +344,7 @@ pub fn end_event(env: &Env, admin: Address, event_id: u64) -> Result<(), Realtim
     let mut event: RealtimeEvent = env
         .storage()
         .instance()
-        .get(&RealtimeKey::Event(event_id))
+        .get(&RealtimeKey::RealtimeEvent(event_id))
         .ok_or(RealtimeError::EventNotFound)?;
 
     if event.status == EventStatus::Ended {
@@ -355,7 +355,7 @@ pub fn end_event(env: &Env, admin: Address, event_id: u64) -> Result<(), Realtim
 
     env.storage()
         .instance()
-        .set(&RealtimeKey::Event(event_id), &event);
+        .set(&RealtimeKey::RealtimeEvent(event_id), &event);
 
     env.events().publish(
         (symbol_short!("rt"), symbol_short!("ended")),
@@ -388,7 +388,7 @@ pub fn join_event(
     let mut event: RealtimeEvent = env
         .storage()
         .instance()
-        .get(&RealtimeKey::Event(event_id))
+        .get(&RealtimeKey::RealtimeEvent(event_id))
         .ok_or(RealtimeError::EventNotFound)?;
 
     if event.participant_count >= event.max_participants {
@@ -424,7 +424,7 @@ pub fn join_event(
     event.last_sync = now;
     env.storage()
         .instance()
-        .set(&RealtimeKey::Event(event_id), &event);
+        .set(&RealtimeKey::RealtimeEvent(event_id), &event);
 
     env.events().publish(
         (symbol_short!("rt"), symbol_short!("joined")),
@@ -468,12 +468,12 @@ pub fn record_contribution(
     let mut event: RealtimeEvent = env
         .storage()
         .instance()
-        .get(&RealtimeKey::Event(event_id))
+        .get(&RealtimeKey::RealtimeEvent(event_id))
         .ok_or(RealtimeError::EventNotFound)?;
     event.last_sync = env.ledger().timestamp();
     env.storage()
         .instance()
-        .set(&RealtimeKey::Event(event_id), &event);
+        .set(&RealtimeKey::RealtimeEvent(event_id), &event);
 
     env.events().publish(
         (symbol_short!("rt"), symbol_short!("contrib")),
@@ -761,7 +761,7 @@ pub fn get_event_leaderboard(
 pub fn get_event(env: &Env, event_id: u64) -> Result<RealtimeEvent, RealtimeError> {
     env.storage()
         .instance()
-        .get(&RealtimeKey::Event(event_id))
+        .get(&RealtimeKey::RealtimeEvent(event_id))
         .ok_or(RealtimeError::EventNotFound)
 }
 
@@ -782,7 +782,7 @@ pub fn get_active_events(env: &Env) -> Vec<u64> {
     let counter: u64 = env
         .storage()
         .instance()
-        .get(&RealtimeKey::EventCounter)
+        .get(&RealtimeKey::RealtimeEventCounter)
         .unwrap_or(0);
 
     let mut active = Vec::new(env);
@@ -790,7 +790,7 @@ pub fn get_active_events(env: &Env) -> Vec<u64> {
         if let Some(event) = env
             .storage()
             .instance()
-            .get::<RealtimeKey, RealtimeEvent>(&RealtimeKey::Event(i))
+            .get::<RealtimeKey, RealtimeEvent>(&RealtimeKey::RealtimeEvent(i))
         {
             if event.status == EventStatus::Active {
                 active.push_back(i);

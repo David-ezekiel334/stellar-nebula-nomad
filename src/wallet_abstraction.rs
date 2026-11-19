@@ -24,7 +24,7 @@ use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbo
 #[contracttype]
 pub enum WalletKey {
     /// Smart wallet config for a player.
-    Config(Address),
+    WalletConfig(Address),
     /// Session key record: (owner, key_id) → SessionKey.
     SessionKey(Address, Address),
     /// All session key IDs for a player.
@@ -140,7 +140,7 @@ pub fn create_wallet(
 ) -> Result<WalletConfig, WalletError> {
     owner.require_auth();
 
-    let key = WalletKey::Config(owner.clone());
+    let key = WalletKey::WalletConfig(owner.clone());
     if env.storage().persistent().has(&key) {
         return Err(WalletError::WalletExists);
     }
@@ -166,7 +166,7 @@ pub fn create_wallet(
 pub fn get_wallet(env: &Env, owner: Address) -> Result<WalletConfig, WalletError> {
     env.storage()
         .persistent()
-        .get(&WalletKey::Config(owner))
+        .get(&WalletKey::WalletConfig(owner))
         .ok_or(WalletError::WalletNotFound)
 }
 
@@ -184,7 +184,7 @@ pub fn add_session_key(
     let _config: WalletConfig = env
         .storage()
         .persistent()
-        .get(&WalletKey::Config(owner.clone()))
+        .get(&WalletKey::WalletConfig(owner.clone()))
         .ok_or(WalletError::WalletNotFound)?;
 
     // Check session key limit.
@@ -418,7 +418,7 @@ pub fn execute_recovery(
     let config: WalletConfig = env
         .storage()
         .persistent()
-        .get(&WalletKey::Config(owner.clone()))
+        .get(&WalletKey::WalletConfig(owner.clone()))
         .ok_or(WalletError::WalletNotFound)?;
 
     let proposal_key = WalletKey::RecoveryProposal(owner.clone(), new_key.clone());

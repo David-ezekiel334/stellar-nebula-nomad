@@ -23,9 +23,9 @@ pub enum ValidatorKey {
     /// Transfer confirmation count: transfer_id -> u32
     ConfirmationCount(BytesN<32>),
     /// Validator last active timestamp
-    LastActive(Address),
+    ValidatorLastActive(Address),
     /// Validator set admin
-    Admin,
+    ValidatorAdmin,
 }
 
 // ─── Errors ────────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ pub fn initialize_validators(
     env.storage()
         .instance()
         .set(&ValidatorKey::RequiredConfirmations, &required_confirmations);
-    env.storage().instance().set(&ValidatorKey::Admin, admin);
+    env.storage().instance().set(&ValidatorKey::ValidatorAdmin, admin);
     
     env.events().publish(
         (symbol_short!("validator"), symbol_short!("init")),
@@ -180,7 +180,7 @@ pub fn confirm_transfer(
     v.total_confirmations += 1;
     validators.set(validator_idx, v);
     env.storage().instance().set(&ValidatorKey::Validators, &validators);
-    env.storage().instance().set(&ValidatorKey::LastActive(validator.clone()), &now);
+    env.storage().instance().set(&ValidatorKey::ValidatorLastActive(validator.clone()), &now);
     
     // Check if threshold met
     let required: u32 = env
@@ -245,7 +245,7 @@ pub fn add_validator(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&ValidatorKey::Admin)
+        .get(&ValidatorKey::ValidatorAdmin)
         .ok_or(ValidatorError::NotAuthorized)?;
     
     if *admin != stored_admin {
@@ -297,7 +297,7 @@ pub fn remove_validator(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&ValidatorKey::Admin)
+        .get(&ValidatorKey::ValidatorAdmin)
         .ok_or(ValidatorError::NotAuthorized)?;
     
     if *admin != stored_admin {
@@ -347,7 +347,7 @@ pub fn set_required_confirmations(
     let stored_admin: Address = env
         .storage()
         .instance()
-        .get(&ValidatorKey::Admin)
+        .get(&ValidatorKey::ValidatorAdmin)
         .ok_or(ValidatorError::NotAuthorized)?;
     
     if *admin != stored_admin {

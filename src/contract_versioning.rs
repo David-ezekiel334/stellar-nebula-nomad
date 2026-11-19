@@ -13,7 +13,7 @@ pub const MIGRATION_BATCH_SIZE: u32 = 50;
 #[contracttype]
 pub enum VersioningKey {
     /// Global version counter.
-    Version,
+    VersioningVersion,
     /// Migration status for a given (old_version, new_version) pair.
     MigrationStatus(u32, u32),
     /// Temporary storage for batch migration state.
@@ -73,10 +73,14 @@ pub struct MigrationRecord {
 
 /// Initialize the versioning system at deployment.
 pub fn initialize_version(env: &Env) {
-    if !env.storage().instance().has(&VersioningKey::Version) {
+    if !env
+        .storage()
+        .instance()
+        .has(&VersioningKey::VersioningVersion)
+    {
         env.storage()
             .instance()
-            .set(&VersioningKey::Version, &CURRENT_VERSION);
+            .set(&VersioningKey::VersioningVersion, &CURRENT_VERSION);
     }
 }
 
@@ -84,7 +88,7 @@ pub fn initialize_version(env: &Env) {
 pub fn get_version(env: &Env) -> u32 {
     env.storage()
         .instance()
-        .get(&VersioningKey::Version)
+        .get(&VersioningKey::VersioningVersion)
         .unwrap_or(CURRENT_VERSION)
 }
 

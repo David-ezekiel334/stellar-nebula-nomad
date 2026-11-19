@@ -396,7 +396,7 @@ a runnable version.
 | [`sustainability_metrics`](#sustainability-metrics-sustainabilityerror) | `SustainabilityError` | 3 | 1–3 | ✅ | ✅ |
 | [`theme_customizer`](#theme-customizer-themeerror) | `ThemeError` | 3 | 1–3 | ✅ | ✅ |
 | [`token_burning`](#token-burning-burningerror) | `BurningError` | 6 | 1–6 | ⚠️ not built |  |
-| [`tournament`](#tournament-tournamenterror) | `TournamentError` | 15 | 1–15 | ⚠️ not built |  |
+| [`tournament`](#tournament-tournamenterror) | `TournamentError` | 34 | 1–34 | ✅ |  |
 | [`trading`](#trading-ammerror) | `AmmError` | 9 | 100–108 | ✅ | ✅ |
 | [`trading`](#trading-tradingerror) | `TradingError` | 6 | 1–6 | ✅ | ✅ |
 | [`treasure_vault`](#treasure-vault-vaulterror) | `VaultError` | 6 | 1–6 | ✅ | ✅ |
@@ -452,7 +452,7 @@ Source: [`src/achievement_engine.rs`](../src/achievement_engine.rs) · Implement
 <a id="achievements-achievementserror"></a>
 ### `achievements` — `AchievementsError`
 
-Source: [`src/achievements.rs`](../src/achievements.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/achievements.rs`](../src/achievements.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -520,7 +520,7 @@ Source: [`src/audit_logger.rs`](../src/audit_logger.rs) · Implements `StandardC
 <a id="badges-badgeerror"></a>
 ### `badges` — `BadgeError`
 
-Source: [`src/badges.rs`](../src/badges.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/badges.rs`](../src/badges.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -573,7 +573,7 @@ Source: [`src/blueprint_factory.rs`](../src/blueprint_factory.rs) · Implements 
 <a id="bot-detection-boterror"></a>
 ### `bot_detection` — `BotError`
 
-Source: [`src/bot_detection.rs`](../src/bot_detection.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/bot_detection.rs`](../src/bot_detection.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -603,7 +603,7 @@ Source: [`src/bounty_board.rs`](../src/bounty_board.rs) · Implements `StandardC
 <a id="bridge-ethereum-bridgeerror"></a>
 ### `bridge::ethereum` — `BridgeError`
 
-Source: [`src/bridge/ethereum.rs`](../src/bridge/ethereum.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/bridge/ethereum.rs`](../src/bridge/ethereum.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -622,7 +622,7 @@ Source: [`src/bridge/ethereum.rs`](../src/bridge/ethereum.rs) · *Not currently 
 <a id="bridge-stellar-ethereum-bridgeerror"></a>
 ### `bridge::stellar_ethereum` — `BridgeError`
 
-Source: [`src/bridge/stellar_ethereum.rs`](../src/bridge/stellar_ethereum.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/bridge/stellar_ethereum.rs`](../src/bridge/stellar_ethereum.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -641,7 +641,7 @@ Source: [`src/bridge/stellar_ethereum.rs`](../src/bridge/stellar_ethereum.rs) ·
 <a id="bridge-validator-validatorerror"></a>
 ### `bridge::validator` — `ValidatorError`
 
-Source: [`src/bridge/validator.rs`](../src/bridge/validator.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/bridge/validator.rs`](../src/bridge/validator.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -658,7 +658,7 @@ Source: [`src/bridge/validator.rs`](../src/bridge/validator.rs) · *Not currentl
 <a id="bug-bounty-payout-bountyerror"></a>
 ### `bug_bounty_payout` — `BountyError`
 
-Source: [`src/bug_bounty_payout.rs`](../src/bug_bounty_payout.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/bug_bounty_payout.rs`](../src/bug_bounty_payout.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -690,7 +690,7 @@ Source: [`src/cache_ttl_manager.rs`](../src/cache_ttl_manager.rs) · Implements 
 <a id="clan-wars-warerror"></a>
 ### `clan_wars` — `WarError`
 
-Source: [`src/clan_wars.rs`](../src/clan_wars.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/clan_wars.rs`](../src/clan_wars.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -726,7 +726,7 @@ Source: [`src/composability_examples.rs`](../src/composability_examples.rs) · I
 <a id="config-updater-configerror"></a>
 ### `config_updater` — `ConfigError`
 
-Source: [`src/config_updater.rs`](../src/config_updater.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/config_updater.rs`](../src/config_updater.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -803,7 +803,7 @@ Source: [`src/crafting.rs`](../src/crafting.rs) · Implements `StandardContractE
 <a id="daily-rewards-dailyrewarderror"></a>
 ### `daily_rewards` — `DailyRewardError`
 
-Source: [`src/daily_rewards.rs`](../src/daily_rewards.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/daily_rewards.rs`](../src/daily_rewards.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -815,7 +815,7 @@ Source: [`src/daily_rewards.rs`](../src/daily_rewards.rs) · *Not currently decl
 <a id="dao-daoerror"></a>
 ### `dao` — `DaoError`
 
-Source: [`src/dao.rs`](../src/dao.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/dao.rs`](../src/dao.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -922,7 +922,7 @@ Source: [`src/environment_simulator.rs`](../src/environment_simulator.rs) · Imp
 <a id="errors-bondingerror"></a>
 ### `errors` — `BondingError`
 
-Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/errors.rs`](../src/errors.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -936,7 +936,7 @@ Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/l
 <a id="errors-mintererror"></a>
 ### `errors` — `MinterError`
 
-Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/errors.rs`](../src/errors.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -949,7 +949,7 @@ Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/l
 <a id="errors-nebulagenerror"></a>
 ### `errors` — `NebulaGenError`
 
-Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/errors.rs`](../src/errors.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -962,7 +962,7 @@ Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/l
 <a id="errors-ratelimiterror"></a>
 ### `errors` — `RateLimitError`
 
-Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/errors.rs`](../src/errors.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -972,7 +972,7 @@ Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/l
 <a id="errors-shipregistryerror"></a>
 ### `errors` — `ShipRegistryError`
 
-Source: [`src/errors.rs`](../src/errors.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/errors.rs`](../src/errors.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1001,7 +1001,7 @@ Source: [`src/escrow_trader.rs`](../src/escrow_trader.rs) · Implements `Standar
 <a id="event-framework-eventframeworkerror"></a>
 ### `event_framework` — `EventFrameworkError`
 
-Source: [`src/event_framework.rs`](../src/event_framework.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/event_framework.rs`](../src/event_framework.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1053,7 +1053,7 @@ Source: [`src/exploration_heatmap.rs`](../src/exploration_heatmap.rs) · Impleme
 <a id="fleet-manager-fleeterror"></a>
 ### `fleet_manager` — `FleetError`
 
-Source: [`src/fleet_manager.rs`](../src/fleet_manager.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/fleet_manager.rs`](../src/fleet_manager.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1159,7 +1159,7 @@ Source: [`src/governance.rs`](../src/governance.rs) · Implements `StandardContr
 <a id="guild-economy-guildeconomyerror"></a>
 ### `guild_economy` — `GuildEconomyError`
 
-Source: [`src/guild_economy.rs`](../src/guild_economy.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/guild_economy.rs`](../src/guild_economy.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1238,7 +1238,7 @@ Source: [`src/leaderboards.rs`](../src/leaderboards.rs) · Implements `StandardC
 <a id="loot-system-looterror"></a>
 ### `loot_system` — `LootError`
 
-Source: [`src/loot_system.rs`](../src/loot_system.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/loot_system.rs`](../src/loot_system.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1311,7 +1311,7 @@ Source: [`src/migration_framework.rs`](../src/migration_framework.rs) · Impleme
 <a id="mini-games-minigameerror"></a>
 ### `mini_games` — `MiniGameError`
 
-Source: [`src/mini_games.rs`](../src/mini_games.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/mini_games.rs`](../src/mini_games.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1366,7 +1366,7 @@ Source: [`src/navigation_planner.rs`](../src/navigation_planner.rs) · Implement
 <a id="nebula-archive-archiveerror"></a>
 ### `nebula_archive` — `ArchiveError`
 
-Source: [`src/nebula_archive.rs`](../src/nebula_archive.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/nebula_archive.rs`](../src/nebula_archive.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1438,7 +1438,7 @@ Source: [`src/nomad_bonding.rs`](../src/nomad_bonding.rs) · Implements `Standar
 <a id="offline-progress-offlineerror"></a>
 ### `offline_progress` — `OfflineError`
 
-Source: [`src/offline_progress.rs`](../src/offline_progress.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/offline_progress.rs`](../src/offline_progress.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1530,7 +1530,7 @@ Source: [`src/prize_distributor.rs`](../src/prize_distributor.rs) · Implements 
 <a id="proxy-proxyerror"></a>
 ### `proxy` — `ProxyError`
 
-Source: [`src/proxy.rs`](../src/proxy.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/proxy.rs`](../src/proxy.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1610,7 +1610,7 @@ Source: [`src/rate_limiter.rs`](../src/rate_limiter.rs) · Implements `StandardC
 <a id="realtime-events-realtimeerror"></a>
 ### `realtime_events` — `RealtimeError`
 
-Source: [`src/realtime_events.rs`](../src/realtime_events.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/realtime_events.rs`](../src/realtime_events.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1861,7 +1861,7 @@ Source: [`src/smart_alerts.rs`](../src/smart_alerts.rs) · Implements `StandardC
 <a id="soul-binding-bindingerror"></a>
 ### `soul_binding` — `BindingError`
 
-Source: [`src/soul_binding.rs`](../src/soul_binding.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/soul_binding.rs`](../src/soul_binding.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1872,7 +1872,7 @@ Source: [`src/soul_binding.rs`](../src/soul_binding.rs) · *Not currently declar
 <a id="staking-stakingerror"></a>
 ### `staking` — `StakingError`
 
-Source: [`src/staking.rs`](../src/staking.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/staking.rs`](../src/staking.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1948,7 +1948,7 @@ Source: [`src/theme_customizer.rs`](../src/theme_customizer.rs) · Implements `S
 <a id="token-burning-burningerror"></a>
 ### `token_burning` — `BurningError`
 
-Source: [`src/token_burning.rs`](../src/token_burning.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/token_burning.rs`](../src/token_burning.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -1962,7 +1962,7 @@ Source: [`src/token_burning.rs`](../src/token_burning.rs) · *Not currently decl
 <a id="tournament-tournamenterror"></a>
 ### `tournament` — `TournamentError`
 
-Source: [`src/tournament.rs`](../src/tournament.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/tournament.rs`](../src/tournament.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|
@@ -2030,7 +2030,7 @@ Source: [`src/treasure_vault.rs`](../src/treasure_vault.rs) · Implements `Stand
 <a id="wallet-abstraction-walleterror"></a>
 ### `wallet_abstraction` — `WalletError`
 
-Source: [`src/wallet_abstraction.rs`](../src/wallet_abstraction.rs) · *Not currently declared in `src/lib.rs`, so not in the deployed WASM. Documented for completeness and future wiring.*
+Source: [`src/wallet_abstraction.rs`](../src/wallet_abstraction.rs) · Codes 19–34 were added in Issue #587; see `docs/TOURNAMENT_GUIDE.md`.
 
 | Code | Variant | Meaning | Category | How to handle |
 |-----:|---------|---------|----------|---------------|

@@ -419,3 +419,20 @@ overflow-checks = true
 # interfere with wasm-opt's size-reduction passes.
 [profile.release-with-opt]
 inherits = "release"
+
+# ─── Security test suites (Issues #608, #609, #610, #611) ──────────────────
+[[test]]
+name = "security_storage_keys"
+path = "tests/security/storage_key_collisions.rs"
+
+[[test]]
+name = "security_rate_limiting"
+path = "tests/security/rate_limiting_tests.rs"
+
+[[test]]
+name = "security_input_validation"
+path = "tests/security/input_validation_tests.rs"
+
+[[test]]
+name = "security_access_control"
+path = "tests/security/access_control_tests.rs"

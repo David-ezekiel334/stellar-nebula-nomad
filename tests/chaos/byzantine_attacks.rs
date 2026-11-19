@@ -59,7 +59,11 @@ fn chaos_byzantine_replay_attack_rejected() {
     assert_eq!(first, AuthResult::Authorized);
 
     let replay = auth.validate("GADMIN", nonce, false);
-    assert_eq!(replay, AuthResult::ReplayAttack, "replayed nonce must be rejected");
+    assert_eq!(
+        replay,
+        AuthResult::ReplayAttack,
+        "replayed nonce must be rejected"
+    );
 }
 
 #[test]
@@ -112,7 +116,11 @@ fn chaos_byzantine_attacker_cannot_impersonate_admin() {
     let spoofed = vec!["GADMIN_", "_GADMIN", "gadmin", "GADMIN\0", " GADMIN"];
     for spoof in spoofed {
         let result = auth.validate(spoof, 100, true);
-        assert_eq!(result, AuthResult::Unauthorized, "spoofed address '{spoof}' must be rejected");
+        assert_eq!(
+            result,
+            AuthResult::Unauthorized,
+            "spoofed address '{spoof}' must be rejected"
+        );
         auth.used_nonces.clear(); // allow reuse across variants
     }
 }
@@ -141,8 +149,14 @@ fn chaos_byzantine_escrow_cannot_be_drained_by_front_running() {
     }
 
     let attacker_result = release_escrow(&mut escrow, 1, "GATTACKER");
-    assert!(attacker_result.is_err(), "attacker must not release another party's escrow");
-    assert!(escrow.contains_key(&1), "escrow must still be held after failed drain");
+    assert!(
+        attacker_result.is_err(),
+        "attacker must not release another party's escrow"
+    );
+    assert!(
+        escrow.contains_key(&1),
+        "escrow must still be held after failed drain"
+    );
 
     let buyer_result = release_escrow(&mut escrow, 1, "GBUYER");
     assert_eq!(buyer_result, Ok(500));
@@ -172,8 +186,10 @@ fn chaos_byzantine_price_manipulation_via_sandwich_attack_bounded() {
     // k can only increase (fees) or stay close due to integer truncation.
     // With no fees and integer math, k may decrease slightly; we just verify no crash.
     assert!(new_k > 0, "pool invariant must remain positive");
-    assert!(victim_out < victim_in || new_reserve_b > new_reserve_a,
-        "victim receives less due to price impact");
+    assert!(
+        victim_out < victim_in || new_reserve_b > new_reserve_a,
+        "victim receives less due to price impact"
+    );
 }
 
 // ─── Governance attack resistance ─────────────────────────────────────────────
@@ -199,23 +215,39 @@ fn chaos_byzantine_governance_quorum_cannot_be_bypassed() {
     let gov = Governance {
         total_votes: 1_000_000,
         quorum_bps: 1_000, // 10% required
-        votes_for: 99_999,  // 9.9999% — just below quorum
+        votes_for: 99_999, // 9.9999% — just below quorum
     };
-    assert!(!gov.has_quorum(), "proposal with <10% participation must not pass");
+    assert!(
+        !gov.has_quorum(),
+        "proposal with <10% participation must not pass"
+    );
 }
 
 #[test]
 fn chaos_byzantine_governance_quorum_met_at_exact_threshold() {
-    struct Governance { total_votes: u64, quorum_bps: u64, votes_for: u64 }
+    struct Governance {
+        total_votes: u64,
+        quorum_bps: u64,
+        votes_for: u64,
+    }
     impl Governance {
         fn has_quorum(&self) -> bool {
-            if self.total_votes == 0 { return false; }
+            if self.total_votes == 0 {
+                return false;
+            }
             self.votes_for * 10_000 / self.total_votes >= self.quorum_bps
         }
     }
 
-    let gov = Governance { total_votes: 1_000_000, quorum_bps: 1_000, votes_for: 100_000 };
-    assert!(gov.has_quorum(), "proposal at exactly 10% participation must pass");
+    let gov = Governance {
+        total_votes: 1_000_000,
+        quorum_bps: 1_000,
+        votes_for: 100_000,
+    };
+    assert!(
+        gov.has_quorum(),
+        "proposal at exactly 10% participation must pass"
+    );
 }
 
 #[test]
@@ -255,7 +287,10 @@ fn chaos_byzantine_integer_overflow_drain_prevented() {
 
     // The contract must use checked_sub to prevent the underflow.
     let result = treasury_balance.checked_sub(attacker_amount);
-    assert!(result.is_none(), "overflow-crafted drain must be caught by checked_sub");
+    assert!(
+        result.is_none(),
+        "overflow-crafted drain must be caught by checked_sub"
+    );
 }
 
 #[test]
@@ -277,5 +312,8 @@ fn chaos_byzantine_bps_overflow_in_fee_prevented() {
 
     let intermediate = amount.checked_mul(rate_bps);
     // u64::MAX/2 * 10_000 overflows — contract must catch this.
-    assert!(intermediate.is_none(), "fee intermediate must be caught for oversized amount");
+    assert!(
+        intermediate.is_none(),
+        "fee intermediate must be caught for oversized amount"
+    );
 }

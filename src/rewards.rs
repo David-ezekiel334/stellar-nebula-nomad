@@ -37,9 +37,9 @@ pub enum RewardKey {
     /// Referrer's code: address -> code
     ReferrerCodeMapping(Address),
     /// Global leaderboard
-    Leaderboard,
+    RewardLeaderboard,
     /// Total rewards distributed
-    TotalRewardsDistributed,
+    RewardTotalRewardsDistributed,
     /// Analytics: daily signups -> count
     DailySignups(u64),
     /// Analytics: daily claims -> count
@@ -332,11 +332,11 @@ pub fn claim_rewards(env: &Env, referrer: &Address) -> Result<i128, RewardError>
     let total: i128 = env
         .storage()
         .instance()
-        .get(&RewardKey::TotalRewardsDistributed)
+        .get(&RewardKey::RewardTotalRewardsDistributed)
         .unwrap_or(0);
     env.storage()
         .instance()
-        .set(&RewardKey::TotalRewardsDistributed, &(total + reward));
+        .set(&RewardKey::RewardTotalRewardsDistributed, &(total + reward));
 
     // Update daily analytics
     let day = env.ledger().timestamp() / 86_400;
@@ -375,7 +375,7 @@ pub fn get_referrer_by_code(env: &Env, code: &BytesN<8>) -> Option<Address> {
 pub fn get_leaderboard(env: &Env) -> Vec<LeaderboardEntry> {
     env.storage()
         .instance()
-        .get(&RewardKey::Leaderboard)
+        .get(&RewardKey::RewardLeaderboard)
         .unwrap_or_else(|| Vec::new(env))
 }
 
@@ -384,7 +384,7 @@ pub fn get_referral_analytics(env: &Env) -> ReferralAnalytics {
     let total_distributed: i128 = env
         .storage()
         .instance()
-        .get(&RewardKey::TotalRewardsDistributed)
+        .get(&RewardKey::RewardTotalRewardsDistributed)
         .unwrap_or(0);
 
     // Calculate totals from all referrer stats (simplified for MVP)

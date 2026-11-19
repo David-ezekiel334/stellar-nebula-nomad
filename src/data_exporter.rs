@@ -10,8 +10,8 @@ const MAX_EXPORT_LIMIT: u32 = 200;
 #[contracttype]
 pub enum ExportKey {
     Settings(u64),
-    Registry,
-    Session,
+    ExportRegistry,
+    ExportSession,
 }
 
 #[contracterror]
@@ -94,20 +94,20 @@ fn store_settings(env: &Env, profile_id: u64, settings: &ExportSettings) {
 fn load_registry(env: &Env) -> Vec<u64> {
     env.storage()
         .persistent()
-        .get(&ExportKey::Registry)
+        .get(&ExportKey::ExportRegistry)
         .unwrap_or_else(|| Vec::new(env))
 }
 
 fn store_registry(env: &Env, registry: &Vec<u64>) {
     env.storage()
         .persistent()
-        .set(&ExportKey::Registry, registry);
+        .set(&ExportKey::ExportRegistry, registry);
 }
 
 fn load_session(env: &Env) -> ExportSession {
     env.storage()
         .instance()
-        .get(&ExportKey::Session)
+        .get(&ExportKey::ExportSession)
         .unwrap_or(ExportSession {
             cursor: 0,
             last_limit: 0,
@@ -116,7 +116,9 @@ fn load_session(env: &Env) -> ExportSession {
 }
 
 fn store_session(env: &Env, session: &ExportSession) {
-    env.storage().instance().set(&ExportKey::Session, session);
+    env.storage()
+        .instance()
+        .set(&ExportKey::ExportSession, session);
 }
 
 fn append_bytes(target: &mut Bytes, data: &[u8]) {

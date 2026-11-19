@@ -69,7 +69,7 @@ use soroban_sdk::{contracterror, contracttype, Env};
 #[contracttype]
 pub enum GuardKey {
     /// Global reentrancy lock flag (instance storage, cheapest to read).
-    ReentrancyLock,
+    GuardReentrancyLock,
 }
 
 /// Error raised when a guarded section is re-entered.
@@ -104,14 +104,14 @@ pub fn acquire(env: &Env) -> Result<(), ReentrancyError> {
     let locked: bool = env
         .storage()
         .instance()
-        .get(&GuardKey::ReentrancyLock)
+        .get(&GuardKey::GuardReentrancyLock)
         .unwrap_or(false);
     if locked {
         return Err(ReentrancyError::ReentrantCall);
     }
     env.storage()
         .instance()
-        .set(&GuardKey::ReentrancyLock, &true);
+        .set(&GuardKey::GuardReentrancyLock, &true);
     Ok(())
 }
 
@@ -119,14 +119,14 @@ pub fn acquire(env: &Env) -> Result<(), ReentrancyError> {
 pub fn release(env: &Env) {
     env.storage()
         .instance()
-        .set(&GuardKey::ReentrancyLock, &false);
+        .set(&GuardKey::GuardReentrancyLock, &false);
 }
 
 /// Returns `true` while a guarded section is currently executing.
 pub fn is_locked(env: &Env) -> bool {
     env.storage()
         .instance()
-        .get(&GuardKey::ReentrancyLock)
+        .get(&GuardKey::GuardReentrancyLock)
         .unwrap_or(false)
 }
 

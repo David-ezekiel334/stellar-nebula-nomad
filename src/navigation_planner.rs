@@ -84,7 +84,7 @@ pub struct NavPath {
 #[derive(Clone)]
 #[contracttype]
 pub enum NavKey {
-    Config,
+    NavConfig,
     /// Adjacency list: nebula_id → Vec<RouteEdge>
     Neighbors(u64),
 }
@@ -149,12 +149,12 @@ fn path_risk(env: &Env, path: &Vec<u64>) -> u32 {
 
 /// Initialise the nebula navigation graph. Must be called once by the admin.
 pub fn initialize_nav_graph(env: &Env, admin: &Address) -> Result<(), NavError> {
-    if env.storage().instance().has(&NavKey::Config) {
+    if env.storage().instance().has(&NavKey::NavConfig) {
         return Err(NavError::AlreadyInitialized);
     }
     admin.require_auth();
     env.storage().instance().set(
-        &NavKey::Config,
+        &NavKey::NavConfig,
         &NavConfig {
             admin: admin.clone(),
             max_hops: MAX_ROUTE_HOPS,
@@ -176,7 +176,7 @@ pub fn add_nebula_connection(
     let _cfg: NavConfig = env
         .storage()
         .instance()
-        .get(&NavKey::Config)
+        .get(&NavKey::NavConfig)
         .ok_or(NavError::NotInitialized)?;
     admin.require_auth();
     if from == to {
@@ -267,7 +267,7 @@ pub fn calculate_optimal_route(env: &Env, start: u64, dest: u64) -> Result<NavPa
     let cfg: NavConfig = env
         .storage()
         .instance()
-        .get(&NavKey::Config)
+        .get(&NavKey::NavConfig)
         .ok_or(NavError::NotInitialized)?;
 
     if start == dest {
@@ -425,7 +425,7 @@ pub fn validate_route_safety(env: &Env, route: Vec<u64>) -> Result<u32, NavError
     let cfg: NavConfig = env
         .storage()
         .instance()
-        .get(&NavKey::Config)
+        .get(&NavKey::NavConfig)
         .ok_or(NavError::NotInitialized)?;
 
     let max_len = cfg.max_hops + 1; // nodes = hops + 1
@@ -486,7 +486,7 @@ mod tests {
         init_graph(&env, &contract_id, &admin);
         env.as_contract(&contract_id, || {
             env.mock_all_auths();
-            let cfg: NavConfig = env.storage().instance().get(&NavKey::Config).unwrap();
+            let cfg: NavConfig = env.storage().instance().get(&NavKey::NavConfig).unwrap();
             assert_eq!(cfg.max_hops, MAX_ROUTE_HOPS);
         });
     }

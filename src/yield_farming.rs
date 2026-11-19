@@ -600,7 +600,7 @@ pub fn require_staking_admin(env: &Env, caller: &Address) -> Result<(), FarmErro
     let admin: Address = env
         .storage()
         .instance()
-        .get(&crate::staking::DataKey::Admin)
+        .get(&crate::staking::DataKey::StakingAdmin)
         .ok_or(FarmError::NotOwner)?;
     if admin != *caller {
         return Err(FarmError::NotOwner);

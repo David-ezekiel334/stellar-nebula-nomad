@@ -30,15 +30,7 @@ fn boundary_u32() -> Vec<u32> {
 
 /// Return a set of boundary i64 values including negatives.
 fn boundary_i64() -> Vec<i64> {
-    vec![
-        i64::MIN,
-        i64::MIN + 1,
-        -1,
-        0,
-        1,
-        i64::MAX - 1,
-        i64::MAX,
-    ]
+    vec![i64::MIN, i64::MIN + 1, -1, 0, 1, i64::MAX - 1, i64::MAX]
 }
 
 // ─── Region / Nebula id validation ──────────────────────────────────────────
@@ -113,7 +105,9 @@ fn fuzz_resource_id_sequence_no_overflow() {
     // under normal gameplay (even at extreme scale).
     let mut id: u64 = 0;
     for _ in 0..1000 {
-        id = id.checked_add(1).expect("resource id overflow after 1000 mints");
+        id = id
+            .checked_add(1)
+            .expect("resource id overflow after 1000 mints");
     }
     assert_eq!(id, 1000);
 }
@@ -150,9 +144,9 @@ fn fuzz_ship_name_length_boundaries() {
     // Ship names with 0 chars, 1 char, max allowed, and over-max must be validated.
     let too_long = "A".repeat(65);
     let cases: Vec<(&str, bool)> = vec![
-        ("", false),           // empty → invalid
-        ("X", true),           // single char → valid
-        ("ValidName", true),   // normal → valid
+        ("", false),         // empty → invalid
+        ("X", true),         // single char → valid
+        ("ValidName", true), // normal → valid
         // 65-char string → exceeds typical 64-byte on-chain limit
         (&too_long, false),
     ];
@@ -228,7 +222,7 @@ fn fuzz_yield_calculation_no_divide_by_zero() {
     // Denominator is always a literal constant — can never be zero.
     for amount in boundary_u64() {
         let rate_bps: u64 = 500; // 5%
-        // Use checked_mul to catch overflow before the division.
+                                 // Use checked_mul to catch overflow before the division.
         if let Some(product) = amount.checked_mul(rate_bps) {
             let _yield = product / 10_000;
         }
@@ -260,7 +254,7 @@ fn fuzz_all_zero_inputs_do_not_panic() {
     let _: u64 = 0u64.saturating_mul(0);
     let _: i64 = 0i64.saturating_add(0);
     let _ = 0u64.checked_div(1); // safe — denominator is 1
-    // checked_div by zero returns None, never panics
+                                 // checked_div by zero returns None, never panics
     assert_eq!(1u64.checked_div(0), None);
 }
 

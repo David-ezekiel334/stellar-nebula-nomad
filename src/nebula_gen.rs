@@ -162,7 +162,7 @@ pub struct NebulaConfig {
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
-    Config,
+    NebulaGenConfig,
     /// Most-recent layout for a ship, keyed by ship_id.
     ActiveLayout(u64),
 }
@@ -297,7 +297,7 @@ impl NebulaGen {
         max_size: u32,
         layout_ttl: u64,
     ) -> Result<(), NebulaError> {
-        if env.storage().instance().has(&DataKey::Config) {
+        if env.storage().instance().has(&DataKey::NebulaGenConfig) {
             return Err(NebulaError::AlreadyInitialized);
         }
         admin.require_auth();
@@ -311,7 +311,7 @@ impl NebulaGen {
         };
         let clamped = default_size.max(min_size).min(max_size);
         env.storage().instance().set(
-            &DataKey::Config,
+            &DataKey::NebulaGenConfig,
             &NebulaConfig {
                 admin,
                 default_size: clamped,
@@ -538,7 +538,9 @@ impl NebulaGen {
             return Err(NebulaError::InvalidTtl);
         }
         config.layout_ttl = new_ttl;
-        env.storage().instance().set(&DataKey::Config, &config);
+        env.storage()
+            .instance()
+            .set(&DataKey::NebulaGenConfig, &config);
         Ok(())
     }
 
@@ -591,7 +593,7 @@ impl NebulaGen {
     fn require_config(env: &Env) -> Result<NebulaConfig, NebulaError> {
         env.storage()
             .instance()
-            .get(&DataKey::Config)
+            .get(&DataKey::NebulaGenConfig)
             .ok_or(NebulaError::NotInitialized)
     }
 
@@ -608,7 +610,7 @@ impl NebulaGen {
         let ttl = env
             .storage()
             .instance()
-            .get::<DataKey, NebulaConfig>(&DataKey::Config)
+            .get::<DataKey, NebulaConfig>(&DataKey::NebulaGenConfig)
             .map_or(DEFAULT_LAYOUT_TTL, |c| c.layout_ttl);
 
         if is_expired(env.ledger().timestamp(), layout.generated_at, ttl) {
@@ -659,7 +661,7 @@ mod tests {
 
     fn ledger_info(seq: u32, ts: u64) -> LedgerInfo {
         LedgerInfo {
-            protocol_version: 22,
+            protocol_version: 28,
             sequence_number: seq,
             timestamp: ts,
             network_id: [0u8; 32],
@@ -702,7 +704,7 @@ mod tests {
 
     // ── ship_id validation (Issue #170) ──────────────────────
 
-    // // #[test]
+    #[test]
     fn test_ship_id_zero_rejected() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -711,7 +713,7 @@ mod tests {
         assert_eq!(result, Err(Ok(NebulaError::InvalidShipId)));
     }
 
-    // // #[test]
+    #[test]
     fn test_ship_id_one_accepted() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -720,7 +722,7 @@ mod tests {
             .is_ok());
     }
 
-    // // #[test]
+    #[test]
     fn test_ship_id_max_u64_accepted() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -731,7 +733,7 @@ mod tests {
 
     // ── region_id validation (Issue #170) ────────────────────
 
-    // // #[test]
+    #[test]
     fn test_region_id_zero_rejected() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -740,7 +742,7 @@ mod tests {
         assert_eq!(result, Err(Ok(NebulaError::InvalidRegionId)));
     }
 
-    // // #[test]
+    #[test]
     fn test_region_id_one_accepted() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -749,7 +751,7 @@ mod tests {
             .is_ok());
     }
 
-    // // #[test]
+    #[test]
     fn test_region_id_max_accepted() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -765,7 +767,7 @@ mod tests {
         );
     }
 
-    // // #[test]
+    #[test]
     fn test_region_id_exceeds_max_rejected() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -778,7 +780,7 @@ mod tests {
         assert_eq!(result, Err(Ok(NebulaError::InvalidRegionId)));
     }
 
-    // // #[test]
+    #[test]
     fn test_region_id_u64_max_rejected() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -793,7 +795,7 @@ mod tests {
 
     // ── seed validation (Issue #170) ─────────────────────────
 
-    // // #[test]
+    #[test]
     fn test_all_zero_seed_rejected() {
         let (env, client, _) = setup();
         let caller = Address::generate(&env);
@@ -804,7 +806,7 @@ mod tests {
 
     // ── combined invalid inputs ───────────────────────────────
 
-    // // #[test]
+    #[test]
     fn test_both_ids_invalid_ship_id_error_first() {
         // ship_id is checked before region_id
         let (env, client, _) = setup();
@@ -816,21 +818,21 @@ mod tests {
 
     // ── has_anomaly validation ────────────────────────────────
 
-    // // #[test]
+    #[test]
     fn test_has_anomaly_ship_id_zero_rejected() {
         let (_env, client, _) = setup();
         let result = client.try_has_anomaly(&0u64, &0u32);
         assert_eq!(result, Err(Ok(NebulaError::InvalidShipId)));
     }
 
-    // // #[test]
+    #[test]
     fn test_has_anomaly_layout_not_found() {
         let (_env, client, _) = setup();
         let result = client.try_has_anomaly(&99u64, &0u32);
         assert_eq!(result, Err(Ok(NebulaError::LayoutNotFound)));
     }
 
-    // // #[test]
+    #[test]
     fn test_has_anomaly_out_of_bounds() {
         let (env, client, _) = setup();
         gen_layout(&env, &client, 5);
@@ -839,7 +841,7 @@ mod tests {
         assert_eq!(result, Err(Ok(NebulaError::AnomalyOutOfBounds)));
     }
 
-    // // #[test]
+    #[test]
     fn test_has_anomaly_valid() {
         let (env, client, _) = setup();
         gen_layout(&env, &client, 5);
@@ -848,7 +850,7 @@ mod tests {
 
     // ── Determinism ───────────────────────────────────────────
 
-    // // #[test]
+    #[test]
     fn test_same_inputs_produce_same_layout_hash() {
         let (env, client, _) = setup();
         let seed = valid_seed(&env);
@@ -942,7 +944,7 @@ mod tests {
             ^ legacy::splitmix64(region_id)
     }
 
-    // // #[test]
+    #[test]
     fn optimised_generation_matches_legacy_output() {
         // Sizes cover: remainder only, exact chunk, chunk + remainder,
         // several chunks, and the configured maximum.
@@ -959,7 +961,7 @@ mod tests {
         }
     }
 
-    // // #[test]
+    #[test]
     fn optimised_seed_fold_matches_legacy_for_many_seeds() {
         let env = Env::default();
         for n in 1u8..=32 {
@@ -978,7 +980,7 @@ mod tests {
         }
     }
 
-    // // #[test]
+    #[test]
     fn generation_is_deterministic_across_envs() {
         let (env_a, client_a) = setup_sized(21);
         let (env_b, client_b) = setup_sized(21);
@@ -1001,7 +1003,7 @@ mod tests {
         }
     }
 
-    // // #[test]
+    #[test]
     fn non_zero_seed_whose_lanes_cancel_is_accepted() {
         // Two identical 8-byte lanes XOR to zero. The seed is not all-zero,
         // so it must be accepted as documented.
@@ -1016,7 +1018,7 @@ mod tests {
             .is_ok());
     }
 
-    // // #[test]
+    #[test]
     fn generation_cpu_budget_within_target() {
         let (env, client) = setup_sized(64);
         let seed = valid_seed(&env);
@@ -1030,14 +1032,14 @@ mod tests {
 
     // ── TTL / lifecycle (from main) ───────────────────────────
 
-    // // #[test]
+    #[test]
     fn layout_available_before_expiry() {
         let (env, client, _) = setup();
         gen_layout(&env, &client, 7);
         assert!(client.get_layout(&7u64).is_some());
     }
 
-    // // #[test]
+    #[test]
     fn layout_auto_cleaned_after_expiry() {
         let (env, client, _) = setup();
         gen_layout(&env, &client, 7);
@@ -1050,7 +1052,7 @@ mod tests {
         );
     }
 
-    // // #[test]
+    #[test]
     fn admin_can_clean_expired_layout() {
         let (env, client, _) = setup();
         gen_layout(&env, &client, 7);
@@ -1060,7 +1062,7 @@ mod tests {
         assert!(!client.clean_expired_layout(&7u64));
     }
 
-    // // #[test]
+    #[test]
     fn admin_batch_cleanup_counts_removed() {
         let (env, client, _) = setup();
         for ship in [10u64, 11, 12] {
@@ -1074,7 +1076,7 @@ mod tests {
         assert_eq!(client.clean_expired_layouts(&ships), 3u32);
     }
 
-    // // #[test]
+    #[test]
     fn admin_can_update_ttl() {
         let (env, client, _) = setup();
         gen_layout(&env, &client, 7);

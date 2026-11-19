@@ -11,7 +11,7 @@ pub const UNPAUSE_DELAY: u64 = 3_600;
 #[contracttype]
 pub enum EmergencyKey {
     /// Global pause flag.
-    Paused,
+    EmergencyPaused,
     /// Authorized admin addresses (multi-sig set at deployment).
     Admins,
     /// Ledger timestamp after which unpause is permitted.
@@ -99,7 +99,9 @@ pub fn initialize_admins(env: &Env, admins: Vec<Address>) -> Result<(), Emergenc
     }
 
     env.storage().instance().set(&EmergencyKey::Admins, &admins);
-    env.storage().instance().set(&EmergencyKey::Paused, &false);
+    env.storage()
+        .instance()
+        .set(&EmergencyKey::EmergencyPaused, &false);
 
     Ok(())
 }
@@ -111,7 +113,7 @@ pub fn require_not_paused(env: &Env) -> Result<(), EmergencyError> {
     let paused: bool = env
         .storage()
         .instance()
-        .get(&EmergencyKey::Paused)
+        .get(&EmergencyKey::EmergencyPaused)
         .unwrap_or(false);
     if paused {
         return Err(EmergencyError::ContractPaused);
@@ -126,7 +128,9 @@ pub fn pause_contract(env: &Env, admin: &Address) -> Result<(), EmergencyError> 
     admin.require_auth();
     require_admin(env, admin)?;
 
-    env.storage().instance().set(&EmergencyKey::Paused, &true);
+    env.storage()
+        .instance()
+        .set(&EmergencyKey::EmergencyPaused, &true);
 
     env.events().publish(
         (symbol_short!("ctrl"), symbol_short!("paused")),
@@ -146,7 +150,7 @@ pub fn schedule_unpause(env: &Env, admin: &Address) -> Result<u64, EmergencyErro
     let paused: bool = env
         .storage()
         .instance()
-        .get(&EmergencyKey::Paused)
+        .get(&EmergencyKey::EmergencyPaused)
         .unwrap_or(false);
     if !paused {
         return Err(EmergencyError::NotPaused);
@@ -177,7 +181,9 @@ pub fn execute_unpause(env: &Env, admin: &Address) -> Result<(), EmergencyError>
         return Err(EmergencyError::UnpauseDelayNotMet);
     }
 
-    env.storage().instance().set(&EmergencyKey::Paused, &false);
+    env.storage()
+        .instance()
+        .set(&EmergencyKey::EmergencyPaused, &false);
     env.storage().instance().remove(&EmergencyKey::UnpauseAt);
 
     env.events().publish(
@@ -216,7 +222,7 @@ pub fn emergency_withdraw(
 pub fn is_paused(env: &Env) -> bool {
     env.storage()
         .instance()
-        .get(&EmergencyKey::Paused)
+        .get(&EmergencyKey::EmergencyPaused)
         .unwrap_or(false)
 }
 

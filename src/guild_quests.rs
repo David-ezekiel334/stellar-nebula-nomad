@@ -34,6 +34,8 @@ pub enum GuildQuestError {
     QuestAlreadyCompleted = 3,
     NotAllianceMember = 4,
     Unauthorized = 5,
+    /// Quest parameters are invalid (e.g. a zero target).
+    InvalidParameters = 6,
 }
 
 impl crate::error_standard::StandardContractError for GuildQuestError {
@@ -43,6 +45,7 @@ impl crate::error_standard::StandardContractError for GuildQuestError {
             Self::QuestNotFound => (ErrorKind::NotFound, false),
             Self::QuestExpired | Self::QuestAlreadyCompleted => (ErrorKind::Conflict, false),
             Self::NotAllianceMember | Self::Unauthorized => (ErrorKind::Authorization, false),
+            Self::InvalidParameters => (ErrorKind::Validation, false),
         };
         crate::error_standard::ErrorDescriptor {
             module: "guild_quests",
@@ -66,13 +69,25 @@ pub fn create_guild_quest(
     reward_xp: u64,
     duration_secs: u64,
 ) -> Result<u64, GuildQuestError> {
-    admin.require_auth(); // Simple auth for admin / creator
+    admin.require_auth();
+
+    // Only the alliance's founder may create quests for it. Quests credit
+    // `reward_essence` to the shared treasury on completion, so letting any
+    // signer create one would mint treasury funds for any alliance.
+    let alliance = crate::alliance_manager::get_alliance(env, alliance_id)
+        .map_err(|_| GuildQuestError::NotAllianceMember)?;
+    if alliance.founder != admin {
+        return Err(GuildQuestError::Unauthorized);
+    }
+    if target_count == 0 {
+        return Err(GuildQuestError::InvalidParameters);
+    }
 
     let count_key = GuildQuestKey::QuestCount(alliance_id);
     let quest_id = env.storage().persistent().get(&count_key).unwrap_or(0u64) + 1;
     env.storage().persistent().set(&count_key, &quest_id);
 
-    let expires_at = env.ledger().timestamp() + duration_secs;
+    let expires_at = env.ledger().timestamp().saturating_add(duration_secs);
 
     let quest = GuildQuest {
         quest_id,

@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, BytesN, Env, String, Vec};
+use soroban_sdk::{contracterror, Address, BytesN, Env, String, Vec};
 
 /// Maximum length for short string fields (names, aliases).
 pub const MAX_NAME_LENGTH: u32 = 64;
@@ -49,6 +49,12 @@ pub enum ValidationError {
     ArrayTooLarge = 95,
     /// Array contains duplicate elements.
     DuplicateElements = 96,
+    /// Two parties that must differ are the same address (e.g. self-challenge).
+    SelfReference = 97,
+    /// Timestamp/duration is zero, too far away, or would overflow.
+    InvalidTimestamp = 98,
+    /// Basis-point shares overflow or do not sum to at most 10_000.
+    InvalidBasisPoints = 99,
 }
 
 impl crate::error_standard::StandardContractError for ValidationError {
@@ -69,7 +75,10 @@ impl crate::error_standard::StandardContractError for ValidationError {
             | Self::InjectionDetected
             | Self::InvalidAddress
             | Self::ZeroAddress
-            | Self::DuplicateElements => (ErrorKind::Validation, false),
+            | Self::DuplicateElements
+            | Self::SelfReference
+            | Self::InvalidTimestamp
+            | Self::InvalidBasisPoints => (ErrorKind::Validation, false),
             Self::ArithmeticOverflow => (ErrorKind::ResourceLimit, false),
         };
         crate::error_standard::ErrorDescriptor {
@@ -212,6 +221,62 @@ pub fn check_positive(value: i128) -> Result<(), ValidationError> {
         return Err(ValidationError::NotPositive);
     }
     Ok(())
+}
+
+/// Validate a numeric value is zero or greater.
+pub fn check_non_negative(value: i128) -> Result<(), ValidationError> {
+    if value < 0 {
+        return Err(ValidationError::OutOfRange);
+    }
+    Ok(())
+}
+
+/// Validate that two addresses are different (no self-challenge, self-trade, ...).
+pub fn check_distinct_addresses(a: &Address, b: &Address) -> Result<(), ValidationError> {
+    if a == b {
+        return Err(ValidationError::SelfReference);
+    }
+    Ok(())
+}
+
+/// Compute `now + window` without overflow, requiring `min <= window <= max`.
+///
+/// Use for every deadline/expiry derived from caller-supplied durations so a
+/// huge `window` cannot wrap or panic the contract.
+pub fn checked_deadline(now: u64, window: u64, min: u64, max: u64) -> Result<u64, ValidationError> {
+    if window < min || window > max {
+        return Err(ValidationError::InvalidTimestamp);
+    }
+    now.checked_add(window)
+        .ok_or(ValidationError::InvalidTimestamp)
+}
+
+/// Validate a list of basis-point shares: at most `max_entries` entries, no
+/// overflow while summing, and a total of at most 10_000 (100%).
+pub fn check_bps_distribution(shares: &Vec<u32>, max_entries: u32) -> Result<(), ValidationError> {
+    if shares.len() > max_entries {
+        return Err(ValidationError::InvalidBasisPoints);
+    }
+    let mut total: u32 = 0;
+    for share in shares.iter() {
+        total = total
+            .checked_add(share)
+            .ok_or(ValidationError::InvalidBasisPoints)?;
+    }
+    if total > 10_000 {
+        return Err(ValidationError::InvalidBasisPoints);
+    }
+    Ok(())
+}
+
+/// Checked `i128` multiplication that reports `ArithmeticOverflow` instead of panicking.
+pub fn safe_mul(a: i128, b: i128) -> Result<i128, ValidationError> {
+    a.checked_mul(b).ok_or(ValidationError::ArithmeticOverflow)
+}
+
+/// Checked `i128` addition that reports `ArithmeticOverflow` instead of panicking.
+pub fn safe_add(a: i128, b: i128) -> Result<i128, ValidationError> {
+    a.checked_add(b).ok_or(ValidationError::ArithmeticOverflow)
 }
 
 /// Validate a value is a valid percentage in range [0, 100].

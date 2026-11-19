@@ -55,9 +55,9 @@ use soroban_sdk::{
 #[contracttype]
 pub enum ProxyKey {
     /// The admin address authorized to perform upgrades.
-    Admin,
+    ProxyAdmin,
     /// Current contract version (monotonic u32, starts at 1).
-    Version,
+    ProxyVersion,
     /// The Wasm hash that was active before the most recent upgrade.
     PreviousWasmHash,
     /// Version number before the most recent upgrade (for rollback).
@@ -127,12 +127,12 @@ pub enum ProxyError {
 pub fn initialize(env: &Env, admin: Address) -> Result<(), ProxyError> {
     admin.require_auth();
 
-    if env.storage().instance().has(&ProxyKey::Admin) {
+    if env.storage().instance().has(&ProxyKey::ProxyAdmin) {
         return Err(ProxyError::AlreadyInitialized);
     }
 
-    env.storage().instance().set(&ProxyKey::Admin, &admin);
-    env.storage().instance().set(&ProxyKey::Version, &1u32);
+    env.storage().instance().set(&ProxyKey::ProxyAdmin, &admin);
+    env.storage().instance().set(&ProxyKey::ProxyVersion, &1u32);
 
     env.events().publish(
         (symbol_short!("prx_init"), admin.clone()),
@@ -152,7 +152,7 @@ pub fn initialize(env: &Env, admin: Address) -> Result<(), ProxyError> {
 pub fn get_admin(env: &Env) -> Result<Address, ProxyError> {
     env.storage()
         .instance()
-        .get(&ProxyKey::Admin)
+        .get(&ProxyKey::ProxyAdmin)
         .ok_or(ProxyError::NotInitialized)
 }
 
@@ -168,7 +168,7 @@ fn require_admin(env: &Env) -> Result<Address, ProxyError> {
 pub fn get_version(env: &Env) -> u32 {
     env.storage()
         .instance()
-        .get(&ProxyKey::Version)
+        .get(&ProxyKey::ProxyVersion)
         .unwrap_or(1)
 }
 
@@ -248,7 +248,7 @@ pub fn execute_upgrade(env: &Env) -> Result<u32, ProxyError> {
     let new_version = old_version + 1;
     env.storage()
         .instance()
-        .set(&ProxyKey::Version, &new_version);
+        .set(&ProxyKey::ProxyVersion, &new_version);
 
     // Append to upgrade history.
     let record = UpgradeRecord {
@@ -300,7 +300,7 @@ pub fn rollback_upgrade(env: &Env) -> Result<u32, ProxyError> {
 
     env.storage()
         .instance()
-        .set(&ProxyKey::Version, &rolled_back_version);
+        .set(&ProxyKey::ProxyVersion, &rolled_back_version);
 
     env.events().publish(
         (symbol_short!("prx_rback"), admin),

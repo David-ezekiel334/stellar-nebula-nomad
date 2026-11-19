@@ -35,6 +35,36 @@ pub struct ScenarioContext {
 
 // ─── Environment Setup ────────────────────────────────────────────────────────
 
+/// Fixed contract address used by module-level unit tests (all-zero contract
+/// id). Every helper below targets the same address so storage written in one
+/// frame is visible in the next.
+const UNIT_TEST_CONTRACT: &str = "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF547H";
+
+/// Address of the contract registered by [`contract_env`].
+pub fn unit_contract_id(env: &Env) -> Address {
+    Address::from_str(env, UNIT_TEST_CONTRACT)
+}
+
+/// Create a fresh [`Env`] with [`NebulaNomadContract`] registered at
+/// [`unit_contract_id`].
+///
+/// Soroban SDK 22+ only allows storage access from inside a contract frame, so
+/// module-level unit tests (which call `crate::<module>::fn(&env, ..)` directly
+/// rather than through a contract client) wrap each call in [`in_contract`].
+pub fn contract_env() -> Env {
+    let env = Env::default();
+    env.register_at(&unit_contract_id(&env), NebulaNomadContract, ());
+    env
+}
+
+/// Run `f` in its own frame of the contract registered by [`contract_env`].
+///
+/// One frame per call mirrors a real transaction: each `require_auth()` for a
+/// given address is satisfied once per frame, exactly as it would be on-chain.
+pub fn in_contract<T>(env: &Env, f: impl FnOnce() -> T) -> T {
+    env.as_contract(&unit_contract_id(env), f)
+}
+
 /// Create a fresh [`Env`] with deterministic ledger settings and return it
 /// together with a registered contract client and a generated player address.
 ///

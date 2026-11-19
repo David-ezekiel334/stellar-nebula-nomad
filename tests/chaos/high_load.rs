@@ -29,7 +29,8 @@ impl RateLimiter {
     }
 
     fn try_consume(&mut self, player: &str, current_ledger: u64) -> bool {
-        let entry = self.request_counts
+        let entry = self
+            .request_counts
             .entry(player.to_string())
             .or_insert((0, current_ledger));
 
@@ -61,7 +62,10 @@ fn chaos_load_rate_limiter_blocks_over_limit() {
     for _ in 0..5 {
         rl.try_consume("player:GABC", 100);
     }
-    assert!(!rl.try_consume("player:GABC", 100), "6th request must be rate-limited");
+    assert!(
+        !rl.try_consume("player:GABC", 100),
+        "6th request must be rate-limited"
+    );
 }
 
 #[test]
@@ -71,7 +75,10 @@ fn chaos_load_rate_limiter_resets_after_window() {
         rl.try_consume("player:GABC", 100);
     }
     // Advance past the window.
-    assert!(rl.try_consume("player:GABC", 111), "request in new window must succeed");
+    assert!(
+        rl.try_consume("player:GABC", 111),
+        "request in new window must succeed"
+    );
 }
 
 #[test]
@@ -140,7 +147,10 @@ fn chaos_load_batch_sum_no_overflow() {
     for item in &batch {
         match total.checked_add(*item) {
             Some(new_total) => total = new_total,
-            None => { overflow = true; break; }
+            None => {
+                overflow = true;
+                break;
+            }
         }
     }
     // 4 * (u64::MAX/4) should fit in u64.
@@ -183,7 +193,11 @@ fn chaos_load_leaderboard_top_10_slice_safe() {
 
     // Safe slicing: min(10, len) prevents out-of-bounds.
     let top = &scores[..scores.len().min(10)];
-    assert_eq!(top.len(), 5, "must return all entries when fewer than 10 exist");
+    assert_eq!(
+        top.len(),
+        5,
+        "must return all entries when fewer than 10 exist"
+    );
 }
 
 // ─── Event queue back-pressure ────────────────────────────────────────────────
@@ -200,7 +214,10 @@ fn chaos_load_event_queue_respects_max_capacity() {
 
     // Attempting to push beyond capacity must be rejected.
     let would_exceed = queue.len() >= MAX_QUEUE_SIZE;
-    assert!(would_exceed, "queue must signal back-pressure at max capacity");
+    assert!(
+        would_exceed,
+        "queue must signal back-pressure at max capacity"
+    );
 }
 
 #[test]
@@ -222,7 +239,9 @@ fn chaos_load_scan_counter_no_overflow() {
     let mut scan_count: u64 = 0;
     // Simulate 1 million scans — must not overflow.
     for _ in 0..1_000_000 {
-        scan_count = scan_count.checked_add(1).expect("scan counter must not overflow");
+        scan_count = scan_count
+            .checked_add(1)
+            .expect("scan counter must not overflow");
     }
     assert_eq!(scan_count, 1_000_000);
 }
@@ -244,7 +263,10 @@ fn chaos_load_points_accumulation_no_overflow() {
     let points_per_second: u64 = 1_000;
     let seconds_per_year: u64 = 365 * 24 * 3600; // 31_536_000
     let annual_points = points_per_second.checked_mul(seconds_per_year);
-    assert!(annual_points.is_some(), "annual points must not overflow u64");
+    assert!(
+        annual_points.is_some(),
+        "annual points must not overflow u64"
+    );
     assert_eq!(annual_points.unwrap(), 31_536_000_000);
 }
 

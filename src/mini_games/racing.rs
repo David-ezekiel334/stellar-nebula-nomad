@@ -20,7 +20,7 @@ pub enum RaceState {
 pub struct RaceCourse {
     pub id: u64,
     pub name: soroban_sdk::String,
-    pub difficulty: u32,     // 1-10
+    pub difficulty: u32, // 1-10
     pub asteroid_count: u32,
     pub checkpoint_count: u32,
     pub best_time_ms: Option<u64>,
@@ -63,7 +63,10 @@ pub fn create_course(
     checkpoint_count: u32,
 ) -> u64 {
     admin.require_auth();
-    let id = env.ledger().timestamp().wrapping_add(env.ledger().sequence() as u64);
+    let id = env
+        .ledger()
+        .timestamp()
+        .wrapping_add(env.ledger().sequence() as u64);
 
     let course = RaceCourse {
         id,
@@ -75,7 +78,9 @@ pub fn create_course(
         best_player: None,
     };
 
-    env.storage().persistent().set(&RaceKey::Course(id), &course);
+    env.storage()
+        .persistent()
+        .set(&RaceKey::Course(id), &course);
     id
 }
 
@@ -83,7 +88,7 @@ pub fn create_course(
 #[contracttype]
 pub enum RaceKey {
     Course(u64),
-    Session(u64),
+    RaceSession(u64),
 }
 
 /// Create a race session.
@@ -100,7 +105,10 @@ pub fn create_race(
         .get::<RaceKey, RaceCourse>(&RaceKey::Course(course_id))
         .ok_or(RaceError::InvalidCourse)?;
 
-    let id = env.ledger().timestamp().wrapping_add(env.ledger().sequence() as u64);
+    let id = env
+        .ledger()
+        .timestamp()
+        .wrapping_add(env.ledger().sequence() as u64);
     let mut players = Vec::new(env);
     players.push_back(creator.clone());
 
@@ -114,7 +122,9 @@ pub fn create_race(
         max_players,
     };
 
-    env.storage().persistent().set(&RaceKey::Session(id), &session);
+    env.storage()
+        .persistent()
+        .set(&RaceKey::RaceSession(id), &session);
     Ok(id)
 }
 
@@ -124,7 +134,7 @@ pub fn join_race(env: &Env, player: &Address, race_id: u64) -> Result<(), RaceEr
     let mut session = env
         .storage()
         .persistent()
-        .get::<RaceKey, RaceSession>(&RaceKey::Session(race_id))
+        .get::<RaceKey, RaceSession>(&RaceKey::RaceSession(race_id))
         .ok_or(RaceError::RaceNotFound)?;
 
     if session.players.len() >= session.max_players {
@@ -135,7 +145,9 @@ pub fn join_race(env: &Env, player: &Address, race_id: u64) -> Result<(), RaceEr
     }
 
     session.players.push_back(player.clone());
-    env.storage().persistent().set(&RaceKey::Session(race_id), &session);
+    env.storage()
+        .persistent()
+        .set(&RaceKey::RaceSession(race_id), &session);
     Ok(())
 }
 
@@ -149,7 +161,7 @@ pub fn record_finish(
     let mut session = env
         .storage()
         .persistent()
-        .get::<RaceKey, RaceSession>(&RaceKey::Session(race_id))
+        .get::<RaceKey, RaceSession>(&RaceKey::RaceSession(race_id))
         .ok_or(RaceError::RaceNotFound)?;
 
     session.finish_times.push_back((player.clone(), time_ms));
@@ -163,10 +175,14 @@ pub fn record_finish(
         if course.best_time_ms.is_none() || time_ms < course.best_time_ms.unwrap() {
             course.best_time_ms = Some(time_ms);
             course.best_player = Some(player.clone());
-            env.storage().persistent().set(&RaceKey::Course(session.course_id), &course);
+            env.storage()
+                .persistent()
+                .set(&RaceKey::Course(session.course_id), &course);
         }
     }
 
-    env.storage().persistent().set(&RaceKey::Session(race_id), &session);
+    env.storage()
+        .persistent()
+        .set(&RaceKey::RaceSession(race_id), &session);
     Ok(())
 }

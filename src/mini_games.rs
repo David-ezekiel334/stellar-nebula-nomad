@@ -101,12 +101,12 @@ pub struct PlayerMiniGameStats {
 #[contracttype]
 #[derive(Clone)]
 pub enum MiniGameKey {
-    Session(u64),
-    SessionCount,
-    PlayerStats(Address),
+    MiniGameSession(u64),
+    MiniGameSessionCount,
+    MiniGamePlayerStats(Address),
     DailyChallenge(u64),
     ActiveChallenge,
-    Leaderboard(MiniGameType, u64),
+    MiniGameLeaderboard(MiniGameType, u64),
     DailyPlays(Address),
     GameConfig(MiniGameType),
     PlayerGames(Address, u64),
@@ -224,7 +224,7 @@ pub fn start_mini_game(
     }
 
     let session_id: u64 = env.storage().persistent()
-        .get(&MiniGameKey::SessionCount).unwrap_or(0) + 1;
+        .get(&MiniGameKey::MiniGameSessionCount).unwrap_or(0) + 1;
 
     let mut players = Vec::new(env);
     players.push_back(player.clone());
@@ -240,14 +240,14 @@ pub fn start_mini_game(
         rewards: Vec::new(env),
     };
 
-    env.storage().persistent().set(&MiniGameKey::Session(session_id), &session);
-    env.storage().persistent().set(&MiniGameKey::SessionCount, &session_id);
+    env.storage().persistent().set(&MiniGameKey::MiniGameSession(session_id), &session);
+    env.storage().persistent().set(&MiniGameKey::MiniGameSessionCount, &session_id);
 
     let mut updated_stats = stats;
     updated_stats.games_played = updated_stats.games_played.saturating_add(1);
     updated_stats.last_play_time = now;
     updated_stats.daily_plays = updated_stats.daily_plays.saturating_add(1);
-    env.storage().persistent().set(&MiniGameKey::PlayerStats(player.clone()), &updated_stats);
+    env.storage().persistent().set(&MiniGameKey::MiniGamePlayerStats(player.clone()), &updated_stats);
     env.storage().persistent().set(&MiniGameKey::DailyPlays(player.clone()), &updated_stats.daily_plays);
 
     env.events().publish(
@@ -267,7 +267,7 @@ pub fn submit_mini_game_score(
     player.require_auth();
 
     let mut session: MiniGameSession = env.storage().persistent()
-        .get(&MiniGameKey::Session(session_id))
+        .get(&MiniGameKey::MiniGameSession(session_id))
         .ok_or(MiniGameError::GameNotFound)?;
 
     if session.state != MiniGameState::InProgress {
@@ -279,7 +279,7 @@ pub fn submit_mini_game_score(
 
     if now - session.started_at > config.time_limit_secs {
         session.state = MiniGameState::Expired;
-        env.storage().persistent().set(&MiniGameKey::Session(session_id), &session);
+        env.storage().persistent().set(&MiniGameKey::MiniGameSession(session_id), &session);
         return Err(MiniGameError::NotActive);
     }
 
@@ -291,7 +291,7 @@ pub fn submit_mini_game_score(
     let reward = config.base_reward * (weighted_score as i128) / 1000;
     session.rewards.push_back(reward);
 
-    env.storage().persistent().set(&MiniGameKey::Session(session_id), &session);
+    env.storage().persistent().set(&MiniGameKey::MiniGameSession(session_id), &session);
 
     let mut stats = get_player_stats(env, player.clone());
     stats.total_score = stats.total_score.saturating_add(weighted_score as u64);
@@ -300,7 +300,7 @@ pub fn submit_mini_game_score(
     }
     stats.games_won = stats.games_won.saturating_add(1);
     stats.total_rewards = stats.total_rewards.saturating_add(reward);
-    env.storage().persistent().set(&MiniGameKey::PlayerStats(player.clone()), &stats);
+    env.storage().persistent().set(&MiniGameKey::MiniGamePlayerStats(player.clone()), &stats);
 
     update_leaderboard(env, player.clone(), session.game_type.clone(), weighted_score);
 
@@ -320,7 +320,7 @@ pub fn join_multiplayer_game(
     player.require_auth();
 
     let mut session: MiniGameSession = env.storage().persistent()
-        .get(&MiniGameKey::Session(session_id))
+        .get(&MiniGameKey::MiniGameSession(session_id))
         .ok_or(MiniGameError::GameNotFound)?;
 
     if session.state != MiniGameState::Waiting && session.state != MiniGameState::InProgress {
@@ -339,7 +339,7 @@ pub fn join_multiplayer_game(
     }
 
     session.players.push_back(player.clone());
-    env.storage().persistent().set(&MiniGameKey::Session(session_id), &session);
+    env.storage().persistent().set(&MiniGameKey::MiniGameSession(session_id), &session);
 
     env.events().publish(
         (symbol_short!("minigame"), symbol_short!("joined")),
@@ -426,7 +426,7 @@ pub fn claim_daily_challenge(
 
     let mut stats = get_player_stats(env, player.clone());
     stats.total_rewards = stats.total_rewards.saturating_add(reward);
-    env.storage().persistent().set(&MiniGameKey::PlayerStats(player.clone()), &stats);
+    env.storage().persistent().set(&MiniGameKey::MiniGamePlayerStats(player.clone()), &stats);
 
     env.events().publish(
         (symbol_short!("minigame"), symbol_short!("ch_clm")),
@@ -437,7 +437,7 @@ pub fn claim_daily_challenge(
 }
 
 fn update_leaderboard(env: &Env, player: Address, game_type: MiniGameType, score: u32) {
-    let leaderboard_key = MiniGameKey::Leaderboard(game_type.clone(), 0);
+    let leaderboard_key = MiniGameKey::MiniGameLeaderboard(game_type.clone(), 0);
     let entries: Vec<LeaderboardEntry> = env.storage().persistent()
         .get(&leaderboard_key).unwrap_or_else(|| Vec::new(env));
 
@@ -471,14 +471,14 @@ fn update_leaderboard(env: &Env, player: Address, game_type: MiniGameType, score
 
 pub fn get_leaderboard(env: &Env, game_type: MiniGameType) -> Vec<LeaderboardEntry> {
     env.storage().persistent()
-        .get(&MiniGameKey::Leaderboard(game_type, 0))
+        .get(&MiniGameKey::MiniGameLeaderboard(game_type, 0))
         .unwrap_or_else(|| Vec::new(env))
 }
 
 pub fn reset_daily_plays(env: &Env, player: Address) {
     let mut stats = get_player_stats(env, player.clone());
     stats.daily_plays = 0;
-    env.storage().persistent().set(&MiniGameKey::PlayerStats(player.clone()), &stats);
+    env.storage().persistent().set(&MiniGameKey::MiniGamePlayerStats(player.clone()), &stats);
     env.storage().persistent().set(&MiniGameKey::DailyPlays(player.clone()), &0u32);
 }
 
@@ -498,7 +498,7 @@ fn get_game_config(env: &Env, game_type: MiniGameType) -> MiniGameConfig {
 
 fn get_player_stats(env: &Env, player: Address) -> PlayerMiniGameStats {
     env.storage().persistent()
-        .get(&MiniGameKey::PlayerStats(player))
+        .get(&MiniGameKey::MiniGamePlayerStats(player))
         .unwrap_or(PlayerMiniGameStats {
             games_played: 0,
             total_score: 0,

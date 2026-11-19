@@ -6,6 +6,8 @@ use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbo
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum PvPError {
+    /// Caller exceeded the rate limit for this operation (Issue #610).
+    RateLimitExceeded = 14,
     /// Player not found.
     PlayerNotFound = 1,
     /// Challenge already exists.
@@ -45,6 +47,7 @@ impl crate::error_standard::StandardContractError for PvPError {
             | Self::AlreadyInCombat
             | Self::NotInQueue
             | Self::AlreadyInitialized => (ErrorKind::Conflict, false),
+            Self::RateLimitExceeded => (ErrorKind::ResourceLimit, true),
             Self::Unauthorized => (ErrorKind::Authorization, false),
             Self::InvalidCombatParams | Self::InvalidMove => (ErrorKind::Validation, false),
             Self::EloUpdateFailed => (ErrorKind::Internal, false),
@@ -65,11 +68,11 @@ impl crate::error_standard::StandardContractError for PvPError {
 #[derive(Clone)]
 pub enum PvPDataKey {
     /// Player combat stats.
-    PlayerStats(Address),
+    PvpPlayerStats(Address),
     /// Active challenge by ID.
-    Challenge(u64),
+    PvpChallenge(u64),
     /// Challenge counter.
-    ChallengeCounter,
+    PvpChallengeCounter,
     /// Active combat by ID.
     Combat(u64),
     /// Combat counter.
@@ -87,9 +90,9 @@ pub enum PvPDataKey {
     /// Combat rewards config.
     RewardsConfig,
     /// Admin address.
-    Admin,
+    PvpAdmin,
     /// Last active timestamp for a player (Issue #191).
-    LastActive(Address),
+    PvpLastActive(Address),
     /// ELO decay configuration.
     EloDecayConfig,
 }
@@ -201,6 +204,17 @@ pub const MAX_HP: u32 = 100;
 pub const MAX_ENERGY: u32 = 100;
 pub const COMBAT_TIMEOUT: u64 = 3600; // 1 hour
 pub const CHALLENGE_EXPIRY: u64 = 86400; // 24 hours
+/// Largest `power` a single combat move may carry (equal to a full health bar).
+pub const MAX_MOVE_POWER: u32 = MAX_HP;
+/// Largest stake accepted on a challenge or matchmaking entry. Keeps stake
+/// arithmetic (pots, fees) far from `i128` overflow.
+pub const MAX_STAKE: i128 = 1_000_000_000_000_000_000;
+
+/// Stake must be non-negative and bounded.
+fn validate_stake(stake: i128) -> Result<(), PvPError> {
+    crate::input_validation::check_range(stake, 0, MAX_STAKE)
+        .map_err(|_| PvPError::InvalidCombatParams)
+}
 pub const MAX_SPECTATORS: u32 = 50;
 pub const MAX_QUEUE_SIZE: u32 = 100;
 
@@ -221,7 +235,7 @@ pub fn set_admin(env: &Env, admin: &Address) -> Result<(), PvPError> {
     if get_admin(env).is_some() {
         return Err(PvPError::AlreadyInitialized);
     }
-    env.storage().persistent().set(&PvPDataKey::Admin, admin);
+    env.storage().persistent().set(&PvPDataKey::PvpAdmin, admin);
     env.events().publish(
         (symbol_short!("pvp"), symbol_short!("admin_set")),
         (Option::<Address>::None, admin.clone()),
@@ -230,7 +244,7 @@ pub fn set_admin(env: &Env, admin: &Address) -> Result<(), PvPError> {
 }
 
 fn get_admin(env: &Env) -> Option<Address> {
-    env.storage().persistent().get(&PvPDataKey::Admin)
+    env.storage().persistent().get(&PvPDataKey::PvpAdmin)
 }
 
 fn require_admin(env: &Env, caller: &Address) -> Result<(), PvPError> {
@@ -257,7 +271,7 @@ pub fn get_or_init_stats(env: &Env, player: &Address) -> CombatStats {
 /// instead of once in the decay path and again afterwards. Returning the
 /// ELO lets `end_combat` skip another rating read.
 fn load_stats_with_elo(env: &Env, player: &Address) -> (CombatStats, u32) {
-    let key = PvPDataKey::PlayerStats(player.clone());
+    let key = PvPDataKey::PvpPlayerStats(player.clone());
     let stats = env.storage().persistent().get(&key).unwrap_or(CombatStats {
         wins: 0,
         losses: 0,
@@ -276,7 +290,7 @@ fn load_stats_with_elo(env: &Env, player: &Address) -> (CombatStats, u32) {
 }
 
 pub fn update_stats(env: &Env, player: &Address, stats: &CombatStats) {
-    let key = PvPDataKey::PlayerStats(player.clone());
+    let key = PvPDataKey::PvpPlayerStats(player.clone());
     env.storage().persistent().set(&key, stats);
     env.events().publish(
         (symbol_short!("pvp"), symbol_short!("stats_upd")),
@@ -329,7 +343,7 @@ fn calculate_elo_change(winner_rating: u32, loser_rating: u32) -> (u32, u32) {
 
 /// Track the last active timestamp for a player. Called on any PvP action.
 pub fn update_last_active(env: &Env, player: &Address) {
-    let key = PvPDataKey::LastActive(player.clone());
+    let key = PvPDataKey::PvpLastActive(player.clone());
     let timestamp = env.ledger().timestamp();
     env.storage().persistent().set(&key, &timestamp);
     env.events().publish(
@@ -340,7 +354,7 @@ pub fn update_last_active(env: &Env, player: &Address) {
 
 /// Get the last active timestamp for a player.
 pub fn get_last_active(env: &Env, player: &Address) -> u64 {
-    let key = PvPDataKey::LastActive(player.clone());
+    let key = PvPDataKey::PvpLastActive(player.clone());
     env.storage().persistent().get(&key).unwrap_or(0)
 }
 
@@ -458,6 +472,15 @@ pub fn create_challenge(
     stake: i128,
 ) -> Result<u64, PvPError> {
     challenger.require_auth();
+    crate::rate_limiter::check_rate_limit(
+        env,
+        challenger,
+        crate::rate_limiter::Operation::CombatInitiation,
+    )?;
+
+    crate::input_validation::check_distinct_addresses(challenger, opponent)
+        .map_err(|_| PvPError::InvalidCombatParams)?;
+    validate_stake(stake)?;
 
     // Check if opponent exists (has stats)
     let _ = get_or_init_stats(env, opponent);
@@ -469,12 +492,12 @@ pub fn create_challenge(
     let counter: u64 = env
         .storage()
         .persistent()
-        .get(&PvPDataKey::ChallengeCounter)
+        .get(&PvPDataKey::PvpChallengeCounter)
         .unwrap_or(0);
     let challenge_id = counter + 1;
     env.storage()
         .persistent()
-        .set(&PvPDataKey::ChallengeCounter, &challenge_id);
+        .set(&PvPDataKey::PvpChallengeCounter, &challenge_id);
 
     let now = env.ledger().timestamp();
     let challenge = Challenge {
@@ -489,7 +512,7 @@ pub fn create_challenge(
 
     env.storage()
         .persistent()
-        .set(&PvPDataKey::Challenge(challenge_id), &challenge);
+        .set(&PvPDataKey::PvpChallenge(challenge_id), &challenge);
 
     env.events().publish(
         (symbol_short!("pvp"), symbol_short!("chall")),
@@ -501,8 +524,13 @@ pub fn create_challenge(
 
 pub fn accept_challenge(env: &Env, caller: &Address, challenge_id: u64) -> Result<u64, PvPError> {
     caller.require_auth();
+    crate::rate_limiter::check_rate_limit(
+        env,
+        caller,
+        crate::rate_limiter::Operation::CombatInitiation,
+    )?;
 
-    let key = PvPDataKey::Challenge(challenge_id);
+    let key = PvPDataKey::PvpChallenge(challenge_id);
     let mut challenge: Challenge = env
         .storage()
         .persistent()
@@ -538,7 +566,7 @@ pub fn accept_challenge(env: &Env, caller: &Address, challenge_id: u64) -> Resul
 pub fn decline_challenge(env: &Env, caller: &Address, challenge_id: u64) -> Result<(), PvPError> {
     caller.require_auth();
 
-    let key = PvPDataKey::Challenge(challenge_id);
+    let key = PvPDataKey::PvpChallenge(challenge_id);
     let mut challenge: Challenge = env
         .storage()
         .persistent()
@@ -561,7 +589,7 @@ pub fn decline_challenge(env: &Env, caller: &Address, challenge_id: u64) -> Resu
 }
 
 pub fn get_challenge(env: &Env, challenge_id: u64) -> Result<Challenge, PvPError> {
-    let key = PvPDataKey::Challenge(challenge_id);
+    let key = PvPDataKey::PvpChallenge(challenge_id);
     env.storage()
         .persistent()
         .get(&key)
@@ -640,6 +668,12 @@ pub fn execute_move(
     power: u32,
 ) -> Result<(), PvPError> {
     player.require_auth();
+
+    // Bound the move power: an unbounded value lets one move exceed a full
+    // health bar and makes the energy/damage arithmetic overflow-prone.
+    if power == 0 || power > MAX_MOVE_POWER {
+        return Err(PvPError::InvalidMove);
+    }
 
     let key = PvPDataKey::Combat(combat_id);
     let mut combat: CombatState = env
@@ -884,6 +918,13 @@ pub fn join_matchmaking(
     preferred_stake: i128,
 ) -> Result<(), PvPError> {
     player.require_auth();
+    crate::rate_limiter::check_rate_limit(
+        env,
+        player,
+        crate::rate_limiter::Operation::CombatInitiation,
+    )?;
+
+    validate_stake(preferred_stake)?;
 
     // Track last active
     update_last_active(env, player);
@@ -1127,6 +1168,12 @@ pub fn get_rewards_config(env: &Env) -> RewardsConfig {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
+impl From<crate::rate_limiter::RateLimitError> for PvPError {
+    fn from(_: crate::rate_limiter::RateLimitError) -> Self {
+        PvPError::RateLimitExceeded
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1138,55 +1185,73 @@ mod tests {
     #[contractimpl]
     impl Stub {}
 
+    /// Run `f` in its own contract frame: each `require_auth()` for a given
+    /// address may be satisfied only once per frame (SDK 22+).
+    fn at<T>(env: &Env, contract: &Address, f: impl FnOnce() -> T) -> T {
+        env.as_contract(contract, f)
+    }
+
     fn make_env() -> (Env, soroban_sdk::Address) {
         let env = Env::default();
+        env.mock_all_auths();
         let id = env.register(Stub, ());
         (env, id)
     }
 
-    // // #[test]
+    #[test]
     fn test_create_challenge() {
-        let (env, _contract_id) = make_env();
+        let (env, contract) = make_env();
         let challenger = Address::generate(&env);
         let opponent = Address::generate(&env);
 
-        env.as_contract(&_contract_id, || {
-            let challenge_id = create_challenge(&env, &challenger, &opponent, 100).unwrap();
-            assert!(challenge_id > 0);
+        let challenge_id = at(&env, &contract, || {
+            create_challenge(&env, &challenger, &opponent, 100)
+        })
+        .unwrap();
+        assert!(challenge_id > 0);
 
-            let challenge = get_challenge(&env, challenge_id).unwrap();
-            assert_eq!(challenge.challenger, challenger);
-        });
+        let challenge = at(&env, &contract, || get_challenge(&env, challenge_id)).unwrap();
+        assert_eq!(challenge.challenger, challenger);
     }
 
-    // // #[test]
+    #[test]
     fn test_accept_challenge_and_combat() {
-        let (env, _contract_id) = make_env();
+        let (env, contract) = make_env();
         let challenger = Address::generate(&env);
         let opponent = Address::generate(&env);
 
-        env.as_contract(&_contract_id, || {
-            let challenge_id = create_challenge(&env, &challenger, &opponent, 100).unwrap();
-            let combat_id = accept_challenge(&env, &opponent, challenge_id).unwrap();
+        let challenge_id = at(&env, &contract, || {
+            create_challenge(&env, &challenger, &opponent, 100)
+        })
+        .unwrap();
+        let combat_id = at(&env, &contract, || {
+            accept_challenge(&env, &opponent, challenge_id)
+        })
+        .unwrap();
 
-            let combat = get_combat(&env, combat_id).unwrap();
-            assert_eq!(combat.status, symbol_short!("active"));
-        });
+        let combat = at(&env, &contract, || get_combat(&env, combat_id)).unwrap();
+        assert_eq!(combat.status, symbol_short!("active"));
     }
 
-    // // #[test]
+    #[test]
     fn test_execute_move() {
-        let (env, _contract_id) = make_env();
+        let (env, contract) = make_env();
         let challenger = Address::generate(&env);
         let opponent = Address::generate(&env);
 
-        env.as_contract(&_contract_id, || {
-            let challenge_id = create_challenge(&env, &challenger, &opponent, 100).unwrap();
-            let combat_id = accept_challenge(&env, &opponent, challenge_id).unwrap();
+        let challenge_id = at(&env, &contract, || {
+            create_challenge(&env, &challenger, &opponent, 100)
+        })
+        .unwrap();
+        let combat_id = at(&env, &contract, || {
+            accept_challenge(&env, &opponent, challenge_id)
+        })
+        .unwrap();
 
-            let combat = get_combat(&env, combat_id).unwrap();
-            let first_player = combat.turn.clone();
+        let combat = at(&env, &contract, || get_combat(&env, combat_id)).unwrap();
+        let first_player = combat.turn.clone();
 
+        at(&env, &contract, || {
             execute_move(
                 &env,
                 &first_player,
@@ -1194,46 +1259,44 @@ mod tests {
                 Symbol::new(&env, "attack"),
                 10,
             )
-            .unwrap();
+        })
+        .unwrap();
 
-            let updated = get_combat(&env, combat_id).unwrap();
-            assert!(updated.player2_hp < 100 || updated.player1_hp < 100);
-        });
+        let updated = at(&env, &contract, || get_combat(&env, combat_id)).unwrap();
+        assert!(updated.player2_hp < 100 || updated.player1_hp < 100);
     }
 
-    // // #[test]
+    #[test]
     fn test_matchmaking() {
-        let (env, _contract_id) = make_env();
+        let (env, contract) = make_env();
         let player1 = Address::generate(&env);
         let player2 = Address::generate(&env);
 
-        env.as_contract(&_contract_id, || {
-            join_matchmaking(&env, &player1, 100).unwrap();
-            join_matchmaking(&env, &player2, 100).unwrap();
+        at(&env, &contract, || join_matchmaking(&env, &player1, 100)).unwrap();
+        at(&env, &contract, || join_matchmaking(&env, &player2, 100)).unwrap();
 
-            let queue_size = get_matchmaking_queue_size(&env);
-            assert_eq!(queue_size, 2);
+        let queue_size = at(&env, &contract, || get_matchmaking_queue_size(&env));
+        assert_eq!(queue_size, 2);
 
-            let matched = process_matchmaking(&env).unwrap();
-            assert!(matched.is_some());
-        });
+        let matched = at(&env, &contract, || process_matchmaking(&env)).unwrap();
+        assert!(matched.is_some());
     }
 
-    // // #[test]
+    #[test]
     fn test_set_admin_cannot_be_hijacked_after_init() {
         // Issue #237: set_admin previously let ANY caller overwrite the
         // admin at any time. Now it is a one-time initializer.
-        let (env, _contract_id) = make_env();
+        let (env, contract) = make_env();
         let admin = Address::generate(&env);
         let attacker = Address::generate(&env);
 
-        env.as_contract(&_contract_id, || {
-            set_admin(&env, &admin).unwrap();
+        at(&env, &contract, || set_admin(&env, &admin)).unwrap();
 
-            let result = set_admin(&env, &attacker);
-            assert_eq!(result, Err(PvPError::AlreadyInitialized));
+        let result = at(&env, &contract, || set_admin(&env, &attacker));
+        assert_eq!(result, Err(PvPError::AlreadyInitialized));
 
-            let result = set_rewards_config(
+        let result = at(&env, &contract, || {
+            set_rewards_config(
                 &env,
                 &attacker,
                 RewardsConfig {
@@ -1242,8 +1305,8 @@ mod tests {
                     elo_bonus_multiplier: 1,
                     streak_bonus: 0,
                 },
-            );
-            assert_eq!(result, Err(PvPError::Unauthorized));
+            )
         });
+        assert_eq!(result, Err(PvPError::Unauthorized));
     }
 }

@@ -23,11 +23,11 @@ pub enum BridgeKey {
     /// Global request counter.
     RequestCounter,
     /// Admin address.
-    Admin,
+    StellarEthAdmin,
     /// Bridge configuration.
-    Config,
+    StellarEthConfig,
     /// Paused state.
-    Paused,
+    StellarEthPaused,
     /// Total bridged amount per address.
     BridgedTotal(Address),
     /// Wrapped asset registry: (asset_symbol, chain_id) -> WrappedAsset.
@@ -163,7 +163,7 @@ fn require_admin(env: &Env, caller: &Address) -> Result<(), BridgeError> {
     let admin: Address = env
         .storage()
         .instance()
-        .get(&BridgeKey::Admin)
+        .get(&BridgeKey::StellarEthAdmin)
         .ok_or(BridgeError::Unauthorized)?;
     if *caller != admin {
         return Err(BridgeError::Unauthorized);
@@ -174,7 +174,7 @@ fn require_admin(env: &Env, caller: &Address) -> Result<(), BridgeError> {
 fn is_paused(env: &Env) -> bool {
     env.storage()
         .instance()
-        .get(&BridgeKey::Paused)
+        .get(&BridgeKey::StellarEthPaused)
         .unwrap_or(false)
 }
 
@@ -200,10 +200,10 @@ fn calculate_fee(amount: i128, fee_bps: u32) -> i128 {
 /// Initialize the bridge with admin and configuration.
 pub fn initialize_bridge(env: &Env, admin: &Address) -> Result<(), BridgeError> {
     admin.require_auth();
-    env.storage().instance().set(&BridgeKey::Admin, admin);
+    env.storage().instance().set(&BridgeKey::StellarEthAdmin, admin);
     env.storage().instance().set(&BridgeKey::RequestCounter, &0u64);
     env.storage().instance().set(
-        &BridgeKey::Config,
+        &BridgeKey::StellarEthConfig,
         &BridgeConfig {
             admin: admin.clone(),
             fee_bps: BRIDGE_FEE_BPS,
@@ -217,7 +217,7 @@ pub fn initialize_bridge(env: &Env, admin: &Address) -> Result<(), BridgeError> 
 /// Pause or unpause the bridge (admin only).
 pub fn set_bridge_paused(env: &Env, admin: &Address, paused: bool) -> Result<(), BridgeError> {
     require_admin(env, admin)?;
-    env.storage().instance().set(&BridgeKey::Paused, &paused);
+    env.storage().instance().set(&BridgeKey::StellarEthPaused, &paused);
     Ok(())
 }
 
@@ -228,7 +228,7 @@ pub fn update_bridge_config(
     config: BridgeConfig,
 ) -> Result<(), BridgeError> {
     require_admin(env, admin)?;
-    env.storage().instance().set(&BridgeKey::Config, &config);
+    env.storage().instance().set(&BridgeKey::StellarEthConfig, &config);
     Ok(())
 }
 
@@ -313,7 +313,7 @@ pub fn initiate_bridge(
     let config: BridgeConfig = env
         .storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::StellarEthConfig)
         .ok_or(BridgeError::Unauthorized)?;
 
     if amount > config.max_amount {
@@ -383,7 +383,7 @@ pub fn confirm_bridge(
     let config: BridgeConfig = env
         .storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::StellarEthConfig)
         .ok_or(BridgeError::Unauthorized)?;
 
     if confirmations < config.min_confirmations {
@@ -510,7 +510,7 @@ pub fn get_bridged_total(env: &Env, player: &Address) -> i128 {
 pub fn get_bridge_config(env: &Env) -> Result<BridgeConfig, BridgeError> {
     env.storage()
         .instance()
-        .get(&BridgeKey::Config)
+        .get(&BridgeKey::StellarEthConfig)
         .ok_or(BridgeError::Unauthorized)
 }
 

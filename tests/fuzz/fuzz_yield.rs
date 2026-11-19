@@ -29,7 +29,10 @@ fn fuzz_apy_bps_overflow_caught() {
     let apy_bps: u64 = 10_000;
     let result = large_principal.checked_mul(apy_bps);
     // This overflows — contract must catch it.
-    assert!(result.is_none(), "overflow must be caught for large principal");
+    assert!(
+        result.is_none(),
+        "overflow must be caught for large principal"
+    );
 }
 
 #[test]
@@ -84,7 +87,10 @@ fn fuzz_lockup_end_time_no_overflow() {
             let result = start.checked_add(*dur);
             // If overflow would occur, contract must return an error.
             if *dur > u64::MAX - *start {
-                assert!(result.is_none(), "overflow in lockup end time must be caught");
+                assert!(
+                    result.is_none(),
+                    "overflow in lockup end time must be caught"
+                );
             } else {
                 assert!(result.is_some());
             }
@@ -154,7 +160,11 @@ fn fuzz_compound_periods_zero_is_no_op() {
     let principal: u64 = 1_000_000;
     let periods: u32 = 0;
     // After 0 periods, balance unchanged.
-    let balance: u64 = if periods == 0 { principal } else { principal + 1 };
+    let balance: u64 = if periods == 0 {
+        principal
+    } else {
+        principal + 1
+    };
     assert_eq!(balance, principal);
 }
 

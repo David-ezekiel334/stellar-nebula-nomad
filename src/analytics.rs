@@ -30,7 +30,7 @@ impl StandardContractError for AnalyticsError {
 #[derive(Clone)]
 pub enum AnalyticsDataKey {
     /// Single-key global counters (total_scans, ships_minted, etc.).
-    GlobalStats,
+    AnalyticsGlobalStats,
     /// Cumulative cosmic essence earned by a player through scanning.
     PlayerEssence(Address),
     /// Ordered list of known players (capped at MAX_PLAYERS).
@@ -90,7 +90,7 @@ pub fn record_scan(env: &Env, player: &Address, essence: u64) {
     let mut stats: GlobalStats = env
         .storage()
         .persistent()
-        .get(&AnalyticsDataKey::GlobalStats)
+        .get(&AnalyticsDataKey::AnalyticsGlobalStats)
         .unwrap_or_default();
     // Non-critical, display-only counters: clamp on overflow rather than
     // panicking so a dashboard aggregate can never brick scan recording
@@ -99,7 +99,7 @@ pub fn record_scan(env: &Env, player: &Address, essence: u64) {
     stats.total_essence_accrued = stats.total_essence_accrued.saturating_add(essence);
     env.storage()
         .persistent()
-        .set(&AnalyticsDataKey::GlobalStats, &stats);
+        .set(&AnalyticsDataKey::AnalyticsGlobalStats, &stats);
 
     // Update per-player cumulative essence.
     let prev: u64 = env
@@ -123,12 +123,12 @@ pub fn record_ship_minted(env: &Env) {
     let mut stats: GlobalStats = env
         .storage()
         .persistent()
-        .get(&AnalyticsDataKey::GlobalStats)
+        .get(&AnalyticsDataKey::AnalyticsGlobalStats)
         .unwrap_or_default();
     stats.ships_minted = stats.ships_minted.saturating_add(1);
     env.storage()
         .persistent()
-        .set(&AnalyticsDataKey::GlobalStats, &stats);
+        .set(&AnalyticsDataKey::AnalyticsGlobalStats, &stats);
 }
 
 /// Add `player` to the leaderboard candidate list if not already present.
@@ -285,7 +285,7 @@ pub fn compute_leaderboard_summary(env: &Env) -> LeaderboardSummary {
 pub fn get_global_stats(env: &Env) -> GlobalStats {
     env.storage()
         .persistent()
-        .get(&AnalyticsDataKey::GlobalStats)
+        .get(&AnalyticsDataKey::AnalyticsGlobalStats)
         .unwrap_or_default()
 }
 
@@ -352,7 +352,7 @@ mod tests {
 
         env.as_contract(&contract_id, || {
             env.storage().persistent().set(
-                &AnalyticsDataKey::GlobalStats,
+                &AnalyticsDataKey::AnalyticsGlobalStats,
                 &GlobalStats {
                     total_scans: u64::MAX,
                     ships_minted: 0,

@@ -17,7 +17,7 @@ pub enum PrivacyKey {
     /// Global commitment counter.
     CommitmentCount,
     /// Burst counter for rate limiting.
-    BurstCounter,
+    PrivacyBurstCounter,
 }
 
 // ─── Data Types ───────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ fn check_burst_limit(env: &Env) -> Result<(), PrivacyError> {
     let current: u32 = env
         .storage()
         .instance()
-        .get(&PrivacyKey::BurstCounter)
+        .get(&PrivacyKey::PrivacyBurstCounter)
         .unwrap_or(0);
 
     if current >= MAX_COMMITMENTS_PER_TX {
@@ -136,7 +136,7 @@ fn check_burst_limit(env: &Env) -> Result<(), PrivacyError> {
 
     env.storage()
         .instance()
-        .set(&PrivacyKey::BurstCounter, &(current + 1));
+        .set(&PrivacyKey::PrivacyBurstCounter, &(current + 1));
 
     Ok(())
 }
@@ -145,7 +145,7 @@ fn check_burst_limit(env: &Env) -> Result<(), PrivacyError> {
 pub fn reset_burst_counter(env: &Env) {
     env.storage()
         .instance()
-        .set(&PrivacyKey::BurstCounter, &0u32);
+        .set(&PrivacyKey::PrivacyBurstCounter, &0u32);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
