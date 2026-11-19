@@ -148,12 +148,13 @@ fn fuzz_ship_level_upgrade_arithmetic() {
 #[test]
 fn fuzz_ship_name_length_boundaries() {
     // Ship names with 0 chars, 1 char, max allowed, and over-max must be validated.
+    let too_long = "A".repeat(65);
     let cases: Vec<(&str, bool)> = vec![
         ("", false),           // empty → invalid
         ("X", true),           // single char → valid
         ("ValidName", true),   // normal → valid
         // 65-char string → exceeds typical 64-byte on-chain limit
-        (&"A".repeat(65), false),
+        (&too_long, false),
     ];
     for (name, expected_valid) in cases {
         let is_valid = !name.is_empty() && name.len() <= 64;
@@ -197,8 +198,8 @@ fn fuzz_elo_delta_boundaries() {
     for delta in boundary_i64() {
         let initial_rating: i64 = 1000;
         let new_rating = initial_rating.checked_add(delta);
-        // Any i64 delta added to 1000 must stay within i64 range.
-        assert!(new_rating.is_some() || delta == i64::MAX);
+        // Only values above MAX - initial overflow a positive rating.
+        assert_eq!(new_rating.is_none(), delta > i64::MAX - initial_rating);
     }
 }
 

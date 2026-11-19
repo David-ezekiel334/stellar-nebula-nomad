@@ -210,6 +210,7 @@ pub fn hauler_abilities(env: &Env) -> Vec<Ability> {
         energy_cost: 10,
         cooldown_turns: 2,
     });
+    v
 }
 
 /// Return the 5 abilities defined for the "stealth" ship type.

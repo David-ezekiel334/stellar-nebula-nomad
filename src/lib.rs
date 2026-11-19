@@ -240,11 +240,10 @@ pub use pvp_combat::{
 pub use elo_rating::{
     advance_season, apply_match_result, apply_seasonal_reset, calculate_updated_ratings,
     check_demotion, check_promotion, get_games_played, get_rating_entry, get_season_config,
-    increment_games_played, k_factor_for, tier_for_rating, tier_symbol, Ability as EloAbility,
-    EloKey, GameMode as EloGameMode, RankTier, RatingEntry, SeasonConfig, DEMOTION_BUFFER,
-    K_FACTOR_HIGH, K_FACTOR_MID, K_FACTOR_NEW, SEASONAL_DECAY_BPS, SEASONAL_FLOOR,
-    TIER_BRONZE_MIN, TIER_CHALLENGER_MIN, TIER_DIAMOND_MIN, TIER_GOLD_MIN,
-    TIER_GRANDMASTER_MIN, TIER_MASTER_MIN, TIER_PLATINUM_MIN, TIER_SILVER_MIN,
+    increment_games_played, k_factor_for, tier_for_rating, tier_symbol, EloKey, RankTier,
+    RatingEntry, SeasonConfig, DEMOTION_BUFFER, K_FACTOR_HIGH, K_FACTOR_MID, K_FACTOR_NEW,
+    SEASONAL_DECAY_BPS, SEASONAL_FLOOR, TIER_BRONZE_MIN, TIER_CHALLENGER_MIN, TIER_DIAMOND_MIN,
+    TIER_GOLD_MIN, TIER_GRANDMASTER_MIN, TIER_MASTER_MIN, TIER_PLATINUM_MIN, TIER_SILVER_MIN,
 };
 // Issue #591 — MMR-based matchmaking with expanding range and abuse prevention.
 pub use matchmaking::{
@@ -388,8 +387,8 @@ pub use audio_seed_generator::{
 };
 pub use constellation_mapper::{
     get_constellation, get_constellation_count, match_constellation, match_constellations_batch,
-    record_constellation, Constellation, ConstellationError, MatchResult, MAX_MATCH_BURST,
-    MIN_STARS,
+    record_constellation, Constellation, ConstellationError,
+    MatchResult as ConstellationMatchResult, MAX_MATCH_BURST, MIN_STARS,
 };
 pub use entanglement_comms::{
     create_entanglement_pair, dissolve_pair, get_entanglement_pair, get_message_count,
@@ -2782,7 +2781,7 @@ impl NebulaNomadContract {
     pub fn match_constellation(
         env: Env,
         observed: Vec<BytesN<32>>,
-    ) -> Result<MatchResult, ConstellationError> {
+    ) -> Result<constellation_mapper::MatchResult, ConstellationError> {
         constellation_mapper::match_constellation(&env, &observed)
     }
 
