@@ -23,3 +23,5 @@ export * from './i18n';
 export * from './a11y';
 export * from './views/MarketOracleDashboard';
 export * from './views/TreasureVaultPanel';
+export * from './utils/portals';
+export * from './views/PortalNetwork';

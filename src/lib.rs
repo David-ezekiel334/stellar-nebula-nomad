@@ -463,9 +463,13 @@ pub use navigation_planner::{
     RouteEdge, MAX_CONNECTIONS_PER_BATCH, MAX_ROUTE_HOPS,
 };
 pub use portal_registry::{
-    get_portal, initialize_portal_registry, query_portal_status, refresh_portal, register_portal,
-    register_portal_batch, travel_through_portal, Portal, PortalError, BASE_TRAVEL_COST,
-    MAX_PORTALS_PER_TX, MIN_STABLE_PCT,
+    can_travel, discover_portals, get_portal, get_portal_access, get_portal_count,
+    get_portal_metadata, get_portal_topology, initialize_portal_registry, is_portal_open,
+    query_portal_status, refresh_portal, register_portal, register_portal_batch,
+    set_portal_access, set_portal_allowed, set_portal_metadata, set_portal_open,
+    travel_through_portal, travel_through_portal_as, Portal, PortalAccessMode, PortalError,
+    PortalLink, PortalMetadata, BASE_TRAVEL_COST, MAX_PORTALS_PER_TX, MAX_TOPOLOGY_PAGE,
+    MIN_STABLE_PCT,
 };
 pub use privacy_stats::{
     batch_commit_stats, commit_private_stat, get_commitment, get_commitment_count, is_opted_in,
