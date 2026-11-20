@@ -332,8 +332,9 @@ pub use treasure_vault::{
 };
 
 pub use anomaly_classifier::{
-    classify_anomaly, classify_batch, get_classification, refine_classification, AnomalyError,
-    ClassificationRecord,
+    calculate_risk_reward, classify_anomaly, classify_batch, classify_nebula_anomaly,
+    get_anomaly_effect, get_classification, refine_classification, AnomalyCategory, AnomalyEffect,
+    AnomalyError, ClassificationRecord,
 };
 pub use audit_logger::{
     get_audit_count, get_audit_retention, get_retained_audit_count, log_audit_event,
@@ -360,8 +361,8 @@ pub use gas_sponsor::{
     MAX_DAILY_SPONSORSHIPS,
 };
 pub use mission_generator::{
-    complete_mission, generate_daily_mission, get_player_missions, update_mission_progress,
-    Mission, MissionError, MissionReward,
+    complete_mission, generate_ai_mission, generate_daily_mission, get_player_missions,
+    update_mission_progress, Mission, MissionError, MissionReward,
 };
 pub use shared_lib::{calculate_yield, validate_address, SharedError};
 pub use sustainability_metrics::{
@@ -399,9 +400,22 @@ pub use constellation_mapper::{
     MIN_STARS,
 };
 pub use entanglement_comms::{
-    create_entanglement_pair, dissolve_pair, get_entanglement_pair, get_message_count,
-    send_entangled_message, send_entangled_message_batch, EntangledMessage, EntanglementError,
-    EntanglementPair, MAX_MESSAGE_BURST, PAIR_LIFETIME_SECS,
+    create_entanglement_pair, create_guild_channel, dissolve_pair, get_entangled_messages,
+    get_entanglement_pair, get_guild_messages, get_message_count, get_pair_encryption_key,
+    get_pair_remaining_uses, send_entangled_message, send_entangled_message_batch,
+    send_guild_message, set_pair_encryption_key, set_pair_use_limit, EntangledMessage,
+    EntanglementError, EntanglementPair, GuildCommsChannel, GuildMessage, DEFAULT_PAIR_USE_LIMIT,
+    MAX_MESSAGE_BURST, PAIR_LIFETIME_SECS,
+};
+pub use achievements::{
+    batch_check_and_unlock, get_achievement_def, get_notifications, get_player_stats,
+    query_progress, try_unlock, AchievementCategory, AchievementDef, AchievementNotification,
+    AchievementProgress as CatalogAchievementProgress, AchievementTier, AchievementsError,
+    PlayerAchievementStats,
+};
+pub use badges::{
+    get_badge_metadata, list_badges_by_owner, mint_badge, transfer_badge, BadgeError,
+    BadgeMetadata, RarityTier,
 };
 pub use event_framework::{EventFrameworkError, StandardEvent};
 pub use event_scheduler::{
@@ -2320,6 +2334,14 @@ impl NebulaNomadContract {
         mission_generator::get_player_missions(&env, player)
     }
 
+    /// Generate an AI-tailored procedural mission for a player (Issue #639).
+    pub fn generate_ai_mission(
+        env: Env,
+        player: Address,
+    ) -> Result<mission_generator::Mission, mission_generator::MissionError> {
+        mission_generator::generate_ai_mission(&env, player)
+    }
+
     // ─── Escrow Trading ───────────────────────────────────────────────────
 
     /// Initiate a peer-to-peer escrow trade.
@@ -2570,6 +2592,21 @@ impl NebulaNomadContract {
 
     pub fn get_classification(env: Env, anomaly_id: u64) -> Option<ClassificationRecord> {
         anomaly_classifier::get_classification(&env, anomaly_id)
+    }
+
+    pub fn get_anomaly_effect(
+        _env: Env,
+        anomaly_type: Symbol,
+        confidence: u32,
+    ) -> anomaly_classifier::AnomalyEffect {
+        anomaly_classifier::get_anomaly_effect(&anomaly_type, confidence)
+    }
+
+    pub fn calculate_anomaly_risk_reward(
+        env: Env,
+        anomaly_id: u64,
+    ) -> Result<anomaly_classifier::AnomalyEffect, anomaly_classifier::AnomalyError> {
+        anomaly_classifier::calculate_risk_reward(&env, anomaly_id)
     }
 
     // ─── Shared Reusability Library (Issue #67) ──────────────────────────
@@ -2896,6 +2933,155 @@ impl NebulaNomadContract {
     /// Return total messages sent over a pair.
     pub fn get_message_count(env: Env, pair_id: u64) -> u64 {
         entanglement_comms::get_message_count(&env, pair_id)
+    }
+
+    /// Set a custom message use limit on an entanglement pair.
+    pub fn set_pair_use_limit(
+        env: Env,
+        caller: Address,
+        pair_id: u64,
+        limit: u64,
+    ) -> Result<(), EntanglementError> {
+        entanglement_comms::set_pair_use_limit(&env, &caller, pair_id, limit)
+    }
+
+    /// Return remaining message uses for an entanglement pair.
+    pub fn get_pair_remaining_uses(env: Env, pair_id: u64) -> Result<u64, EntanglementError> {
+        entanglement_comms::get_pair_remaining_uses(&env, pair_id)
+    }
+
+    /// Set the shared encryption key commitment hash for an entanglement pair.
+    pub fn set_pair_encryption_key(
+        env: Env,
+        caller: Address,
+        pair_id: u64,
+        key_hash: BytesN<32>,
+    ) -> Result<(), EntanglementError> {
+        entanglement_comms::set_pair_encryption_key(&env, &caller, pair_id, key_hash)
+    }
+
+    /// Read the shared encryption key commitment hash for a pair.
+    pub fn get_pair_encryption_key(
+        env: Env,
+        pair_id: u64,
+    ) -> Result<BytesN<32>, EntanglementError> {
+        entanglement_comms::get_pair_encryption_key(&env, pair_id)
+    }
+
+    /// Fetch encrypted message history for a pair.
+    pub fn get_entangled_messages(
+        env: Env,
+        pair_id: u64,
+        offset: u64,
+        limit: u32,
+    ) -> Vec<EntangledMessage> {
+        entanglement_comms::get_entangled_messages(&env, pair_id, offset, limit)
+    }
+
+    /// Create a guild coordination channel backed by alliance_manager.
+    pub fn create_guild_channel(
+        env: Env,
+        caller: Address,
+        guild_id: u64,
+        encrypted_topic: BytesN<32>,
+    ) -> Result<entanglement_comms::GuildCommsChannel, EntanglementError> {
+        entanglement_comms::create_guild_channel(&env, &caller, guild_id, encrypted_topic)
+    }
+
+    /// Broadcast an encrypted coordination message to a guild channel.
+    pub fn send_guild_message(
+        env: Env,
+        caller: Address,
+        guild_id: u64,
+        sender_region: u64,
+        payload: BytesN<64>,
+    ) -> Result<u64, EntanglementError> {
+        entanglement_comms::send_guild_message(&env, &caller, guild_id, sender_region, payload)
+    }
+
+    /// Fetch guild coordination messages.
+    pub fn get_guild_messages(
+        env: Env,
+        guild_id: u64,
+        offset: u64,
+        limit: u32,
+    ) -> Vec<entanglement_comms::GuildMessage> {
+        entanglement_comms::get_guild_messages(&env, guild_id, offset, limit)
+    }
+
+    // ─── Achievements & Badges Integration (Issue #641) ───────────────────
+
+    pub fn get_achievement_def(
+        env: Env,
+        id: u64,
+    ) -> Result<achievements::AchievementDef, achievements::AchievementsError> {
+        achievements::get_achievement_def(&env, id)
+    }
+
+    pub fn unlock_catalog_achievement(
+        env: Env,
+        player: Address,
+        achievement_id: u64,
+    ) -> Result<u64, achievement_engine::AchievementError> {
+        achievements::try_unlock(&env, &player, achievement_id)
+    }
+
+    pub fn query_achievement_progress(
+        env: Env,
+        player: Address,
+        achievement_id: u64,
+    ) -> Result<achievements::AchievementProgress, achievements::AchievementsError> {
+        achievements::query_progress(&env, &player, achievement_id)
+    }
+
+    pub fn get_achievement_stats(
+        env: Env,
+        player: Address,
+    ) -> Result<achievements::PlayerAchievementStats, achievements::AchievementsError> {
+        achievements::get_player_stats(&env, &player)
+    }
+
+    pub fn get_achievement_notifications(
+        env: Env,
+        player: Address,
+    ) -> Vec<achievements::AchievementNotification> {
+        achievements::get_notifications(&env, &player)
+    }
+
+    pub fn batch_unlock_catalog_achvs(
+        env: Env,
+        player: Address,
+    ) -> Result<Vec<u64>, achievement_engine::AchievementError> {
+        achievements::batch_check_and_unlock(&env, &player)
+    }
+
+    pub fn mint_badge_nft(
+        env: Env,
+        badge_id: u64,
+        description: String,
+        image_uri: String,
+    ) -> Result<badges::BadgeMetadata, badges::BadgeError> {
+        badges::mint_badge(&env, badge_id, description, image_uri)
+    }
+
+    pub fn get_badge_metadata(
+        env: Env,
+        badge_id: u64,
+    ) -> Result<badges::BadgeMetadata, badges::BadgeError> {
+        badges::get_badge_metadata(&env, badge_id)
+    }
+
+    pub fn transfer_badge(
+        env: Env,
+        from: Address,
+        to: Address,
+        badge_id: u64,
+    ) -> Result<(), badges::BadgeError> {
+        badges::transfer_badge(&env, from, to, badge_id)
+    }
+
+    pub fn list_badges_by_owner(env: Env, player: Address) -> Vec<u64> {
+        badges::list_badges_by_owner(&env, &player)
     }
 
     // ─── Fractional Resource Ownership API (Issue #89) ────────────────────
