@@ -343,6 +343,42 @@
         batch_processor::clear_batch(&env, &player)
     }
 
+    /// Execute batch minting operations atomically (Issue #678).
+    pub fn execute_batch_mint(
+        env: Env,
+        caller: Address,
+        mint_ops: Vec<(u64, u32, Symbol, u64)>,
+    ) -> Result<BatchMintResult, BatchError> {
+        batch_processor::execute_batch_mint(&env, &caller, mint_ops)
+    }
+
+    /// Execute batch trade operations atomically (Issue #678).
+    pub fn execute_batch_trade(
+        env: Env,
+        caller: Address,
+        trades: Vec<(Symbol, Symbol, u64)>,
+    ) -> Result<BatchTradeResult, BatchError> {
+        batch_processor::execute_batch_trade(&env, &caller, trades)
+    }
+
+    /// Execute batch transfer operations atomically (Issue #678).
+    pub fn execute_batch_transfer(
+        env: Env,
+        caller: Address,
+        transfers: Vec<BatchTransferItem>,
+    ) -> Result<BatchTransferResult, BatchError> {
+        batch_processor::execute_batch_transfer(&env, &caller, transfers)
+    }
+
+    /// Execute batch update operations atomically (Issue #678).
+    pub fn execute_batch_update(
+        env: Env,
+        caller: Address,
+        updates: Vec<BatchUpdateItem>,
+    ) -> Result<BatchUpdateResult, BatchError> {
+        batch_processor::execute_batch_update(&env, &caller, updates)
+    }
+
     // ─── On-chain Audit Logging (Issue #64) ───────────────────────────────
 
     pub fn log_audit_event(

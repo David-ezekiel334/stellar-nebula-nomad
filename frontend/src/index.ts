@@ -23,5 +23,5 @@ export * from './i18n';
 export * from './a11y';
 export * from './views/MarketOracleDashboard';
 export * from './views/TreasureVaultPanel';
-export * from './utils/health';
-export * from './views/HealthDashboard';
+export * from './utils/notifications';
+export * from './views/NotificationCenter';

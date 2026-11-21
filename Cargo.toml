@@ -96,6 +96,11 @@ harness = false
 name = "performance_metrics"
 harness = false
 
+# Contract WASM binary size optimization benchmark (#677)
+[[bench]]
+name = "wasm_size_benchmarks"
+harness = false
+
 # ─── Integration tests, grouped by module under tests/<group>/ ────────────
 # Explicit paths so binary names (and existing `cargo test --test <name>`
 # invocations in CI/docs) are unaffected by the directory grouping.
@@ -421,6 +426,7 @@ panic = "abort"
 incremental = false
 # Strip debug symbols and DWARF sections from the final artifact.
 strip = true
+rpath = false
 # Arithmetic overflow must abort (not silently wrap) — see docs/YIELD_MATH.md
 # and the checked/saturating arithmetic used throughout the balance-modifying
 # contract functions (Issue #239).
@@ -432,6 +438,11 @@ overflow-checks = true
 # interfere with wasm-opt's size-reduction passes.
 [profile.release-with-opt]
 inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
 
 # ─── Security test suites (Issues #608, #609, #610, #611) ──────────────────
 [[test]]
