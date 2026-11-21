@@ -304,7 +304,7 @@ a runnable version.
 | [`bot_detection`](#bot-detection-boterror) | `BotError` | 6 | 1–6 | ⚠️ not built |  |
 | [`bounty_board`](#bounty-board-bountyerror) | `BountyError` | 8 | 1–8 | ✅ | ✅ |
 | [`bridge::ethereum`](#bridge-ethereum-bridgeerror) | `BridgeError` | 11 | 1–11 | ⚠️ not built |  |
-| [`bridge::stellar_ethereum`](#bridge-stellar-ethereum-bridgeerror) | `BridgeError` | 11 | 90–100 | ⚠️ not built |  |
+| [`bridge::stellar_ethereum`](#bridge-stellar-ethereum-bridgeerror) | `BridgeError` | 17 | 90–106 | ✅ |  |
 | [`bridge::validator`](#bridge-validator-validatorerror) | `ValidatorError` | 9 | 1–9 | ⚠️ not built |  |
 | [`bug_bounty_payout`](#bug-bounty-payout-bountyerror) | `BountyError` | 11 | 1–11 | ⚠️ not built |  |
 | [`cache_ttl_manager`](#cache-ttl-manager-cachettlerror) | `CacheTtlError` | 5 | 1–5 | ✅ | ✅ |
@@ -629,14 +629,20 @@ Source: [`src/bridge/stellar_ethereum.rs`](../src/bridge/stellar_ethereum.rs) ·
 | 90 | `BridgePaused` | Bridge is paused. | State | The entity is in the wrong state or time window. Read its current state, then wait or take the prerequisite step first. |
 | 91 | `InvalidAmount` | Invalid amount (zero or negative). | Validation | Fix the arguments: check ranges, non-zero values, lengths and IDs before sending. |
 | 92 | `AmountExceeded` | Amount exceeds bridge limit. | ResourceLimit | Reduce the amount or batch size, top up balances or pools, or wait for the limit window to reset. |
-| 93 | `InsufficientBalance` | Insufficient balance for bridging. | ResourceLimit | Reduce the amount or batch size, top up balances or pools, or wait for the limit window to reset. |
+| 93 | `InsufficientBalance` | Not enough locked liquidity to release. | ResourceLimit | Reduce the amount or batch size, top up balances or pools, or wait for the limit window to reset. |
 | 94 | `RequestNotFound` | Request not found. | NotFound | Check the ID/key. Create or register the entity first, or refresh cached client state. |
 | 95 | `InvalidRequestState` | Request is not in a valid state for this operation. | Validation | Fix the arguments: check ranges, non-zero values, lengths and IDs before sending. |
 | 96 | `InsufficientConfirmations` | Insufficient confirmations. | ResourceLimit | Reduce the amount or batch size, top up balances or pools, or wait for the limit window to reset. |
 | 97 | `Unauthorized` | Unauthorized action. | Authorization | Sign with the account that holds the required role or ownership; check role grants. |
-| 98 | `TooManyPendingRequests` | Maximum pending requests reached. | ResourceLimit | Reduce the amount or batch size, top up balances or pools, or wait for the limit window to reset. |
-| 99 | `InvalidEthAddress` | Invalid Ethereum address format. | Validation | Fix the arguments: check ranges, non-zero values, lengths and IDs before sending. |
+| 98 | `TooManyPendingRequests` | The player has `MAX_PENDING_REQUESTS` pending requests. | ResourceLimit | Reduce the amount or batch size, top up balances or pools, or wait for the limit window to reset. |
+| 99 | `InvalidEthAddress` | Invalid Ethereum address (zero address). | Validation | Fix the arguments: check ranges, non-zero values, lengths and IDs before sending. |
 | 100 | `AssetNotRegistered` | Asset not registered. | NotFound | Check the ID/key. Create or register the entity first, or refresh cached client state. |
+| 101 | `AlreadyInitialized` | Bridge already initialized. | State | The entity is in the wrong state or time window. Read its current state, then wait or take the prerequisite step first. |
+| 102 | `InvalidConfig` | Configuration out of range or admin mismatch. | Validation | Fix the arguments: check ranges, non-zero values, lengths and IDs before sending. |
+| 103 | `AlreadyProcessed` | Ethereum transaction or message nonce already processed. | State | The entity is in the wrong state or time window. Read its current state, then wait or take the prerequisite step first. |
+| 104 | `InvalidMessage` | Message payload empty or larger than `MAX_MESSAGE_BYTES`. | Validation | Fix the arguments: check ranges, non-zero values, lengths and IDs before sending. |
+| 105 | `AssetDisabled` | Bridging is disabled for this asset. | State | The entity is in the wrong state or time window. Read its current state, then wait or take the prerequisite step first. |
+| 106 | `AssetAlreadyRegistered` | Asset already registered for this chain. | State | The entity is in the wrong state or time window. Read its current state, then wait or take the prerequisite step first. |
 
 <a id="bridge-validator-validatorerror"></a>
 ### `bridge::validator` — `ValidatorError`
