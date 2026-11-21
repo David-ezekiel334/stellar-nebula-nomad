@@ -1,4 +1,6 @@
 import React from 'react';
+import { colors } from '../../a11y';
+import { useI18n } from '../../i18n';
 
 export interface AchievementBadgeProps {
   id: string;
@@ -33,9 +35,10 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
   const borderColor = unlocked ? (RARITY_BORDER[rarityTier] ?? '#3B82F6') : '#334155';
 
   return (
+    // A static badge is not a live region: use a labelled group, not role="status".
     <div
-      role="status"
-      aria-label={`${title} achievement: ${unlocked ? 'Unlocked' : 'Locked'}`}
+      role="group"
+      aria-label={t('achievement.label', { title, status })}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -48,9 +51,11 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
       }}
     >
       <div
+        aria-hidden="true"
         style={{
           fontSize: '1.75rem',
           filter: unlocked ? 'none' : 'grayscale(100%)',
+          opacity: unlocked ? 1 : 0.6,
         }}
       >
         {icon}
