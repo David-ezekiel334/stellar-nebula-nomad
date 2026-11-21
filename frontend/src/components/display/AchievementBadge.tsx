@@ -9,7 +9,18 @@ export interface AchievementBadgeProps {
   unlocked: boolean;
   unlockedAt?: string;
   icon?: string;
+  rarityTier?: 0 | 1 | 2 | 3 | 4;
+  category?: string;
+  progressPct?: number;
 }
+
+const RARITY_BORDER: Record<number, string> = {
+  0: '#64748B',
+  1: '#10B981',
+  2: '#3B82F6',
+  3: '#A855F7',
+  4: '#F59E0B',
+};
 
 export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
   title,
@@ -17,9 +28,12 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
   unlocked,
   unlockedAt,
   icon = '🏆',
+  rarityTier = 2,
+  category,
+  progressPct,
 }) => {
-  const { t } = useI18n();
-  const status = t(unlocked ? 'achievement.unlocked' : 'achievement.locked');
+  const borderColor = unlocked ? (RARITY_BORDER[rarityTier] ?? '#3B82F6') : '#334155';
+
   return (
     // A static badge is not a live region: use a labelled group, not role="status".
     <div
@@ -31,8 +45,9 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
         gap: '12px',
         padding: '12px',
         borderRadius: '8px',
-        backgroundColor: unlocked ? colors.bgRaised : colors.bgSurface,
-        border: `1px ${unlocked ? 'solid' : 'dashed'} ${unlocked ? colors.accent : colors.textMuted}`,
+        backgroundColor: unlocked ? '#1E293B' : '#0F172A',
+        border: `1px solid ${borderColor}`,
+        opacity: unlocked ? 1 : 0.6,
       }}
     >
       <div
@@ -46,19 +61,20 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
         {icon}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span
-          style={{
-            fontWeight: 700,
-            color: unlocked ? colors.textPrimary : colors.textMuted,
-            fontSize: '0.9rem',
-          }}
-        >
-          {title}
+        <span style={{ fontWeight: 700, color: unlocked ? '#F8FAFC' : '#94A3B8', fontSize: '0.9rem' }}>
+          {title} {category ? `[${category}]` : ''}
         </span>
-        <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>{description}</span>
-        <span style={{ color: unlocked ? colors.success : colors.textMuted, fontSize: '0.7rem', marginTop: '2px' }}>
-          {unlocked && unlockedAt ? t('achievement.unlockedOn', { date: unlockedAt }) : status}
-        </span>
+        <span style={{ color: '#64748B', fontSize: '0.75rem' }}>{description}</span>
+        {!unlocked && typeof progressPct === 'number' && (
+          <span style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '2px' }}>
+            Progress: {progressPct}%
+          </span>
+        )}
+        {unlocked && unlockedAt && (
+          <span style={{ color: '#10B981', fontSize: '0.7rem', marginTop: '2px' }}>
+            Unlocked on {unlockedAt}
+          </span>
+        )}
       </div>
     </div>
   );
