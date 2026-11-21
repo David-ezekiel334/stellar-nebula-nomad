@@ -1,11 +1,16 @@
 //! Alliance membership, treasury, and progression management.
 //!
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, String, Vec};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, String, Symbol, Vec};
 
 use crate::input_validation;
 
 // Alliance configuration constants
+/// Base member cap at level 1; grows with level (see [`get_alliance_benefits`]).
 pub const MAX_MEMBERS_PER_ALLIANCE: u32 = 50;
+/// Hard ceiling on members regardless of level.
+pub const MAX_MEMBER_CAP: u32 = 100;
+/// Base cost of claiming a territory before level discounts.
+pub const TERRITORY_CLAIM_COST: i128 = 500;
 pub const MIN_VOTING_THRESHOLD: u32 = 51; // 51% for decisions
 pub const INITIAL_TREASURY: i128 = 0;
 
@@ -20,6 +25,16 @@ pub enum AllianceKey {
     AllianceLevelInfo(u64),           // alliance_id -> GuildLevelInfo
     TerritoryClaim(u64),              // coordinate_hash -> alliance_id
     GuildBoss(u64),                   // alliance_id -> GuildBossState
+    /// (alliance_id, member) -> AllianceRole; absent means Member.
+    AllianceMemberRole(u64, Address),
+    /// (lower id, higher id) -> DiplomaticStatus; absent means Neutral.
+    AllianceRelation(u64, u64),
+    /// (from, to) -> proposed DiplomaticStatus.
+    AllianceRelationProposal(u64, u64),
+    /// (alliance_id, objective_id) -> AllianceObjective.
+    AllianceObjective(u64, u32),
+    /// alliance_id -> next objective id.
+    AllianceObjectiveCount(u64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -53,6 +68,16 @@ pub enum AllianceError {
     InsufficientVotes = 7,
     /// Member hit today's guild contribution cap (anti-whale).
     ContributionCapExceeded = 8,
+    /// The leader must hand over leadership before leaving a non-empty alliance.
+    LeaderMustTransfer = 9,
+    /// Target alliance or member is invalid for this action.
+    InvalidTarget = 10,
+    /// Objective does not exist.
+    ObjectiveNotFound = 11,
+    /// Objective is completed or past its deadline.
+    ObjectiveClosed = 12,
+    /// Objective parameters or contribution amount are invalid.
+    InvalidObjective = 13,
 }
 
 impl crate::error_standard::StandardContractError for AllianceError {
@@ -60,10 +85,14 @@ impl crate::error_standard::StandardContractError for AllianceError {
         use crate::error_standard::ErrorKind;
         let (kind, retryable) = match self {
             Self::AllianceFull | Self::InsufficientVotes => (ErrorKind::ResourceLimit, false),
-            Self::AllianceNotFound => (ErrorKind::NotFound, false),
-            Self::AlreadyInAlliance => (ErrorKind::Conflict, false),
+            Self::AllianceNotFound | Self::ObjectiveNotFound => (ErrorKind::NotFound, false),
+            Self::AlreadyInAlliance | Self::LeaderMustTransfer | Self::ObjectiveClosed => {
+                (ErrorKind::Conflict, false)
+            }
             Self::NotMember | Self::Unauthorized => (ErrorKind::Authorization, false),
-            Self::InvalidName => (ErrorKind::Validation, false),
+            Self::InvalidName | Self::InvalidTarget | Self::InvalidObjective => {
+                (ErrorKind::Validation, false)
+            }
             Self::ContributionCapExceeded => (ErrorKind::ResourceLimit, true),
         };
         crate::error_standard::ErrorDescriptor {
@@ -80,6 +109,8 @@ impl crate::error_standard::StandardContractError for AllianceError {
 pub struct Alliance {
     pub alliance_id: u64,
     pub name: String,
+    /// Current leader: the founder until `transfer_leadership` hands it on.
+    /// Other modules (guild_economy, guild_quests) authorize against it.
     pub founder: Address,
     pub created_at: u64,
     pub members: Vec<Address>,
@@ -196,8 +227,8 @@ pub fn join_alliance(
         .get::<AllianceKey, Alliance>(&AllianceKey::Alliance(alliance_id))
         .ok_or(AllianceError::AllianceNotFound)?;
 
-    // Check member limit
-    if alliance.members.len() >= MAX_MEMBERS_PER_ALLIANCE.try_into().unwrap() {
+    // Check member limit (grows with alliance level)
+    if alliance.members.len() >= get_alliance_benefits(env, alliance_id).member_cap {
         return Err(AllianceError::AllianceFull);
     }
 
@@ -255,25 +286,11 @@ pub fn leave_alliance(env: &Env, player: Address) -> Result<(), AllianceError> {
         .get::<AllianceKey, Alliance>(&AllianceKey::Alliance(alliance_id))
         .ok_or(AllianceError::AllianceNotFound)?;
 
-    // Remove member from alliance
-    let mut updated_members = Vec::new(env);
-    for member in alliance.members.iter() {
-        if member != player {
-            updated_members.push_back(member);
-        }
+    if alliance.founder == player && alliance.members.len() > 1 {
+        return Err(AllianceError::LeaderMustTransfer);
     }
 
-    alliance.members = updated_members;
-
-    // Update alliance
-    env.storage()
-        .persistent()
-        .set(&AllianceKey::Alliance(alliance_id), &alliance);
-
-    // Remove player's alliance membership
-    env.storage()
-        .persistent()
-        .remove(&AllianceKey::MemberAlliance(player.clone()));
+    remove_member(env, &mut alliance, &player);
 
     // Emit event
     env.events().publish(
@@ -448,7 +465,8 @@ pub fn claim_guild_territory(
 
     let alliance_id = get_player_alliance(env, player.clone()).ok_or(AllianceError::NotMember)?;
 
-    let cost = 500i128;
+    let discount = i128::from(get_alliance_benefits(env, alliance_id).territory_discount_bps);
+    let cost = TERRITORY_CLAIM_COST * (10_000 - discount) / 10_000;
     let treasury_key = AllianceKey::AllianceTreasury(alliance_id);
     let current_treasury = get_alliance_treasury(env, alliance_id);
 

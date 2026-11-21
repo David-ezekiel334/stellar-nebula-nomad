@@ -416,9 +416,12 @@ pub use yield_forecast::{
 };
 
 pub use alliance_manager::{
-    contribute_to_treasury, found_alliance, get_alliance, get_alliance_treasury,
-    get_member_contribution, get_player_alliance, join_alliance, leave_alliance, Alliance,
-    AllianceError, MembershipRecord, MAX_MEMBERS_PER_ALLIANCE,
+    contribute_objective, contribute_to_treasury, create_objective, found_alliance, get_alliance,
+    get_alliance_benefits, get_alliance_treasury, get_member_contribution, get_member_role,
+    get_objective, get_objective_count, get_player_alliance, get_relation, get_relation_proposal,
+    join_alliance, kick_member, leave_alliance, propose_relation, set_member_role,
+    transfer_leadership, Alliance, AllianceBenefits, AllianceError, AllianceObjective,
+    AllianceRole, DiplomaticStatus, MembershipRecord, MAX_MEMBERS_PER_ALLIANCE, MAX_MEMBER_CAP,
 };
 pub use guild_economy::{
     claim_quest_reward_share, create_treasury_proposal, execute_proposal, get_guild_tax_rate,
