@@ -28,6 +28,10 @@ use soroban_sdk::{
     contract, contractimpl, symbol_short, Address, Bytes, BytesN, Env, String, Symbol, Vec,
 };
 
+use crate::bridge::stellar_ethereum::{
+    self, BridgeConfig, BridgeError, BridgeRequest, WrappedAsset,
+};
+
 // `nebula_explorer` is a private module, so re-export the whole scan surface to
 // give downstream callers (and integration tests) a nameable path.
 pub use crate::input_validation::{
@@ -187,6 +191,9 @@ pub mod mobile_views;
 /// Adapters for external Stellar services (Horizon, Stellar.expert).
 #[path = "../integrations/mod.rs"]
 pub mod integrations;
+
+/// Ethereum <-> Stellar asset bridge and cross-chain messaging (#713).
+pub mod bridge;
 
 /// Economic modeling: pricing, sinks, progression curves, anti-whale guards.
 pub mod economics;
@@ -4200,6 +4207,183 @@ impl NebulaNomadContract {
     /// Read featured houses for a discovery tier.
     pub fn housing_get_featured(env: Env, tier: Symbol) -> Vec<Address> {
         player_housing::get_featured_houses(&env, tier)
+    }
+
+    // === Ethereum Bridge (Issue #713) ===
+
+    /// Initialize the Ethereum bridge with its admin (relayer). Runs once.
+    pub fn bridge_initialize(env: Env, admin: Address) -> Result<(), BridgeError> {
+        stellar_ethereum::initialize_bridge(&env, &admin)
+    }
+
+    /// Pause or unpause the bridge (admin only).
+    pub fn bridge_set_paused(env: Env, admin: Address, paused: bool) -> Result<(), BridgeError> {
+        stellar_ethereum::set_bridge_paused(&env, &admin, paused)
+    }
+
+    /// Update fee, confirmations and per-transfer limit (admin only).
+    pub fn bridge_update_config(
+        env: Env,
+        admin: Address,
+        config: BridgeConfig,
+    ) -> Result<(), BridgeError> {
+        stellar_ethereum::update_bridge_config(&env, &admin, config)
+    }
+
+    /// Read the bridge configuration.
+    pub fn bridge_get_config(env: Env) -> Result<BridgeConfig, BridgeError> {
+        stellar_ethereum::get_bridge_config(&env)
+    }
+
+    /// Register a Stellar token for bridging to an Ethereum token (admin only).
+    pub fn bridge_register_asset(
+        env: Env,
+        admin: Address,
+        symbol: Symbol,
+        token: Address,
+        eth_contract: BytesN<20>,
+        chain_id: u32,
+    ) -> Result<u64, BridgeError> {
+        stellar_ethereum::register_wrapped_asset(&env, &admin, symbol, token, eth_contract, chain_id)
+    }
+
+    /// Enable or disable bridging for one asset (admin only).
+    pub fn bridge_set_asset_enabled(
+        env: Env,
+        admin: Address,
+        symbol: Symbol,
+        chain_id: u32,
+        enabled: bool,
+    ) -> Result<(), BridgeError> {
+        stellar_ethereum::set_wrapped_asset_enabled(&env, &admin, symbol, chain_id, enabled)
+    }
+
+    /// Read a bridged asset, including locked liquidity and collected fees.
+    pub fn bridge_get_asset(
+        env: Env,
+        symbol: Symbol,
+        chain_id: u32,
+    ) -> Result<WrappedAsset, BridgeError> {
+        stellar_ethereum::get_wrapped_asset(&env, symbol, chain_id)
+    }
+
+    /// Lock tokens and request their release on Ethereum. Returns the request ID.
+    pub fn bridge_initiate(
+        env: Env,
+        player: Address,
+        asset: Symbol,
+        chain_id: u32,
+        amount: i128,
+        eth_recipient: BytesN<20>,
+    ) -> Result<u64, BridgeError> {
+        stellar_ethereum::initiate_bridge(&env, player, asset, chain_id, amount, eth_recipient)
+    }
+
+    /// Confirm the Ethereum mint for a pending request (admin only).
+    pub fn bridge_confirm(
+        env: Env,
+        admin: Address,
+        request_id: u64,
+        dest_tx_hash: BytesN<32>,
+        confirmations: u32,
+    ) -> Result<(), BridgeError> {
+        stellar_ethereum::confirm_bridge(&env, admin, request_id, dest_tx_hash, confirmations)
+    }
+
+    /// Complete a confirmed request (admin only).
+    pub fn bridge_complete(env: Env, admin: Address, request_id: u64) -> Result<(), BridgeError> {
+        stellar_ethereum::complete_bridge(&env, admin, request_id)
+    }
+
+    /// Cancel a pending request and refund it (player only).
+    pub fn bridge_cancel(env: Env, player: Address, request_id: u64) -> Result<(), BridgeError> {
+        stellar_ethereum::cancel_bridge(&env, player, request_id)
+    }
+
+    /// Reject a pending request and refund it (admin only).
+    pub fn bridge_fail(env: Env, admin: Address, request_id: u64) -> Result<(), BridgeError> {
+        stellar_ethereum::fail_bridge(&env, admin, request_id)
+    }
+
+    /// Release tokens for a burn on Ethereum, once per burn transaction (admin only).
+    #[allow(clippy::too_many_arguments)]
+    pub fn bridge_release(
+        env: Env,
+        admin: Address,
+        eth_tx_hash: BytesN<32>,
+        eth_sender: BytesN<20>,
+        asset: Symbol,
+        chain_id: u32,
+        recipient: Address,
+        amount: i128,
+        confirmations: u32,
+    ) -> Result<u64, BridgeError> {
+        stellar_ethereum::release_from_ethereum(
+            &env,
+            admin,
+            eth_tx_hash,
+            eth_sender,
+            asset,
+            chain_id,
+            recipient,
+            amount,
+            confirmations,
+        )
+    }
+
+    /// Whether an Ethereum burn transaction has already been released.
+    pub fn bridge_is_eth_tx_processed(env: Env, eth_tx_hash: BytesN<32>) -> bool {
+        stellar_ethereum::is_eth_tx_processed(&env, eth_tx_hash)
+    }
+
+    /// Withdraw the fees collected for an asset to `to` (admin only).
+    pub fn bridge_withdraw_fees(
+        env: Env,
+        admin: Address,
+        asset: Symbol,
+        chain_id: u32,
+        to: Address,
+    ) -> Result<i128, BridgeError> {
+        stellar_ethereum::withdraw_bridge_fees(&env, admin, asset, chain_id, to)
+    }
+
+    /// Send a message to an Ethereum contract. Returns its nonce.
+    pub fn bridge_send_message(
+        env: Env,
+        sender: Address,
+        chain_id: u32,
+        eth_target: BytesN<20>,
+        payload: Bytes,
+    ) -> Result<u64, BridgeError> {
+        stellar_ethereum::send_message(&env, sender, chain_id, eth_target, payload)
+    }
+
+    /// Record a message from Ethereum, once per (chain, nonce) (admin only).
+    pub fn bridge_receive_message(
+        env: Env,
+        admin: Address,
+        chain_id: u32,
+        nonce: u64,
+        eth_sender: BytesN<20>,
+        recipient: Address,
+        payload: Bytes,
+    ) -> Result<(), BridgeError> {
+        stellar_ethereum::receive_message(&env, admin, chain_id, nonce, eth_sender, recipient, payload)
+    }
+
+    /// Whether the inbound message (chain, nonce) has been received.
+    pub fn bridge_is_message_processed(env: Env, chain_id: u32, nonce: u64) -> bool {
+        stellar_ethereum::is_message_processed(&env, chain_id, nonce)
+    }
+
+    /// Read a bridge request.
+    pub fn bridge_get_request(env: Env, request_id: u64) -> Result<BridgeRequest, BridgeError> {
+        stellar_ethereum::get_bridge_request(&env, request_id)
+    }
+
+    /// Total amount an address has bridged to Ethereum.
+    pub fn bridge_get_bridged_total(env: Env, player: Address) -> i128 {
+        stellar_ethereum::get_bridged_total(&env, &player)
     }
 }
 
