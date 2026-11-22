@@ -45,6 +45,7 @@ pub mod access_control;
 mod analytics;
 mod blueprint_factory;
 pub mod constants;
+pub mod config;
 mod content_tools;
 pub mod error_standard;
 /// Overflow-safe arithmetic primitives shared by the economic modules.
