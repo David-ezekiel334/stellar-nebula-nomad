@@ -534,6 +534,15 @@ pub fn init_default_season_rewards(
     season_id: u64,
 ) -> Result<(), BattlePassError> {
     admin.require_auth();
+    init_default_season_rewards_inner(env, season_id)
+}
+
+/// Install the default reward tables without an auth check.
+///
+/// The seasonal transition authenticates its admin once and then calls this
+/// directly, avoiding a second `require_auth` for the same address in one
+/// invocation (which the Soroban host rejects).
+pub fn init_default_season_rewards_inner(
     seed_default_season_rewards(env, season_id)
 }
 
