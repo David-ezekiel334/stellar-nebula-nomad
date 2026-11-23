@@ -30,6 +30,10 @@ export * from './feedback/ConfirmDialog';
 
 // Admin / safety components
 export * from './AntiCheatReviewDashboard';
+// Seasonal content components
+export * from './SeasonalDashboard';
+// Guild cooperation
+export * from './GuildQuestBoard';
 
 // Analytics components
 export * from './analytics/SystemHealthPanel';
