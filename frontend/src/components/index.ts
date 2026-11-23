@@ -28,6 +28,8 @@ export * from './feedback/ErrorBoundary';
 export * from './feedback/ToastNotification';
 export * from './feedback/ConfirmDialog';
 
+// Admin / safety components
+export * from './AntiCheatReviewDashboard';
 // Seasonal content components
 export * from './SeasonalDashboard';
 // Guild cooperation
