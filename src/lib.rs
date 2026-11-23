@@ -266,6 +266,17 @@ pub use pvp_combat::{
     ELO_DECAY_BASE_POINTS, ELO_DECAY_FLOOR, ELO_DECAY_INACTIVITY_SECS, INITIAL_ELO, K_FACTOR,
     MAX_ENERGY, MAX_HP, MAX_QUEUE_SIZE, MAX_SPECTATORS,
 };
+// Issue #592 — combat replay storage, playback and sharing.
+pub use combat_replay::{
+    deserialize_replay, get_replay, get_replay_bundle, get_replay_by_share, get_replay_frame,
+    get_replay_frames, get_replay_id_for_combat, get_replay_id_for_share, get_player_replays,
+    playback_state, seek_to_turn, serialize_replay, share_replay, CombatReplay, PlaybackState,
+    ReplayBundle, ReplayError, ReplayExport, ReplayFrameView, ReplayKey, ReplayShare,
+    FrameState, ReplayError as CombatReplayError, FRAME_CANCEL, FRAME_FINISH, FRAME_MOVE,
+    FRAME_START, FRAMES_PER_CHUNK, MAX_FRAME_PAGE, MAX_REPLAY_FRAMES, MAX_REPLAYS_PER_OWNER,
+    REPLAY_FORMAT_VERSION, REPLAY_FRAME_BYTES, SPEED_DOUBLE_BPS, SPEED_HALF_BPS,
+    SPEED_NORMAL_BPS,
+};
 // Issue #590 — ELO rating system with 8 tiers, K-factor, seasonal adjustments.
 pub use elo_rating::{
     advance_season, apply_match_result, apply_seasonal_reset, calculate_updated_ratings,
