@@ -30,6 +30,8 @@ export * from './feedback/ConfirmDialog';
 
 // Seasonal content components
 export * from './SeasonalDashboard';
+// Guild cooperation
+export * from './GuildQuestBoard';
 
 // Analytics components
 export * from './analytics/SystemHealthPanel';
