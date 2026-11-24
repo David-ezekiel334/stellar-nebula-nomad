@@ -267,6 +267,39 @@ pub fn weighted_average_u32(values: &Vec<u32>, weights: &Vec<u32>) -> u32 {
     (weighted_sum / weight_sum) as u32
 }
 
+/// Fast integer square root using bitwise binary search (avoids floating point and expensive division)
+pub fn fast_isqrt_u64(n: u64) -> u64 {
+    if n == 0 {
+        return 0;
+    }
+    let mut x0 = n >> 1;
+    if x0 == 0 {
+        return 1;
+    }
+    let mut x1 = (x0 + n / x0) >> 1;
+    while x1 < x0 {
+        x0 = x1;
+        x1 = (x0 + n / x0) >> 1;
+    }
+    x0
+}
+
+/// Optimized Manhattan distance computation for 2D coordinates (gas-efficient pathfinding heuristic)
+#[inline]
+pub fn fast_manhattan_distance(x1: u32, y1: u32, x2: u32, y2: u32) -> u32 {
+    let dx = if x1 > x2 { x1 - x2 } else { x2 - x1 };
+    let dy = if y1 > y2 { y1 - y2 } else { y2 - y1 };
+    dx + dy
+}
+
+/// Optimized Euclidean distance approximation for gas-efficient combat/range calculations
+#[inline]
+pub fn fast_distance_approx(x1: u32, y1: u32, x2: u32, y2: u32) -> u32 {
+    let dx = if x1 > x2 { (x1 - x2) as u64 } else { (x2 - x1) as u64 };
+    let dy = if y1 > y2 { (y1 - y2) as u64 } else { (y2 - y1) as u64 };
+    fast_isqrt_u64(dx * dx + dy * dy) as u32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

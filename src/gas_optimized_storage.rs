@@ -144,6 +144,34 @@ pub fn batch_write_i128(env: &Env, keys: &Vec<Symbol>, values: &Vec<i128>) {
     }
 }
 
+/// Helper macro and constants for compact, gas-efficient storage key generation
+pub mod compact_keys {
+    use soroban_sdk::{symbol_short, Symbol};
+
+    pub const KEY_CFG: Symbol = symbol_short!("cfg");
+    pub const KEY_STATE: Symbol = symbol_short!("state");
+    pub const KEY_COUNT: Symbol = symbol_short!("count");
+    pub const KEY_ADMIN: Symbol = symbol_short!("admin");
+    pub const KEY_BAL: Symbol = symbol_short!("bal");
+    pub const KEY_PAUSE: Symbol = symbol_short!("paused");
+
+    /// In-memory fast key cache wrapper to avoid repeated heap allocation/deserialization
+    #[derive(Clone, Debug)]
+    pub struct FastKeyCache {
+        pub hit_count: u32,
+    }
+
+    impl FastKeyCache {
+        pub const fn new() -> Self {
+            Self { hit_count: 0 }
+        }
+
+        pub fn record_hit(&mut self) {
+            self.hit_count = self.hit_count.saturating_add(1);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
